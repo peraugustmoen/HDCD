@@ -1,7 +1,7 @@
 #include "header.h"
 
 
-
+//' This function applies soft tresholding
 void internal_soft_thresh(double * x, int len, double lambda){
     double tmp;
     for (int i = 0; i < len; ++i)
