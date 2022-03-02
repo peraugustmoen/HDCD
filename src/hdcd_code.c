@@ -1,213 +1,15 @@
-#include "header.h"
-
-
-
-void internal_soft_thresh(double * x, int len, double lambda){
-    double tmp;
-    for (int i = 0; i < len; ++i)
-    {
-        tmp = fabs(x[i]) - lambda;
-        if(tmp<0){
-            tmp=0.0;
-        }
-        else{
-            if(x[i]<0){
-                tmp = -tmp;
-            }
-        }
-        x[i] = tmp;
-    }
-}
-
-SEXP soft_thresh(SEXP xI, SEXP lenI, SEXP lambdaI){
-    PROTECT(xI);
-    PROTECT(lenI);
-    PROTECT(lambdaI);
-
-
-    int len = *INTEGER(lenI);
-    double lambda = *REAL(lambdaI);
-    double * x = REAL(xI);
-
-    UNPROTECT(2);
-
-
-    //SEXP out = PROTECT(allocVector(REALSXP, 1));
-
-    internal_soft_thresh(x, len, lambda);
-
-    UNPROTECT(1);
-    return(xI);
-}
-
-
-
-double * internal_sparse_svd(double * Z, int r1, int c1, double lambda, double eps, int maxiter,
-                        double * mhat, double * mhatprod, double * v, double * v2,int debug){
-
-    memcpy(mhat, Z, r1*c1*sizeof(double));
-    internal_soft_thresh(mhat, r1*c1, lambda);
-
-    //SEXP ret;
-    //SEXP tmpret;
-    double * projection;
-    double * tmproj;
-    double summ=0;
-    double sumsq=0;
-    if(r1<c1){
-
-        internal_matmultrightT(mhat, mhatprod,r1, c1);
-        projection = internal_power_method(mhatprod, r1, eps, maxiter, v, v2,debug);
-        if(projection==NULL){
-          return NULL;
-        }
-    }
-    else{
-
-        //mhatprodSEXP = PROTECT(allocVector(REALSXP, c1*c1));
-        //double *mhatprod = REAL(mhatprodSEXP);
-        internal_matmultleftT(mhat, mhatprod,r1, c1);
-
-        tmproj = internal_power_method(mhatprod, c1, eps, maxiter,v,v2,debug);
-        if(tmproj==NULL){
-          return NULL;
-        }
-        //PROTECT(tmpret);
-        //tmpretarr = REAL(tmpret);
-        //ret = PROTECT(allocVector(REALSXP, c1));
-        //tmparr = REAL(ret);
-        projection = v;
-        if(tmproj ==v){
-            projection = v2;
-        }
-        internal_matmult(mhat, tmproj, projection, r1, c1, r1, 1);
-
-        for (int i = 0; i < r1; ++i)
-        {
-            summ+=projection[i]*projection[i];
-        }
-        sumsq=sqrt(summ);
-        for (int i = 0; i < r1; ++i)
-        {
-            projection[i] = projection[i]/sumsq;
-        }
-
-
-    }
-
-    /*UNPROTECT(3);
-    if (r1>=c1)
-    {
-        UNPROTECT(1);
-    }*/
-    return projection;
-}
-
-SEXP sparse_svd(SEXP ZI, SEXP r1I, SEXP c1I, SEXP lambdaI, SEXP epsI, SEXP maxiterI){
-    PROTECT(ZI);
-    PROTECT(r1I);
-    PROTECT(c1I);
-    PROTECT(lambdaI);
-    PROTECT(epsI);
-    PROTECT(maxiterI);
-
-    double *Z= REAL(ZI);
-    int r1 = *(INTEGER(r1I));
-    int c1 = *(INTEGER(c1I));
-    double lambda= *(REAL(lambdaI));
-    double eps = *(REAL(epsI));
-    int maxiter= *(INTEGER(maxiterI));
-    UNPROTECT(5);
-
-    int maxlen = r1;
-    int minlen = c1;
-    if(c1>r1){
-        maxlen = c1;
-        minlen = r1;
-    }
-    SEXP vec1SEXP = PROTECT(allocVector(REALSXP, maxlen));
-    SEXP vec2SEXP = PROTECT(allocVector(REALSXP, maxlen));
-    SEXP mhatSEXP = PROTECT(allocVector(REALSXP, r1*c1));
-    SEXP mhatprodSEXP = PROTECT(allocVector(REALSXP, minlen*minlen));
-
-    double * vec1 = REAL(vec1SEXP);
-    double * vec2 = REAL(vec2SEXP);
-    double * mhat = REAL(mhatSEXP);
-    double * mhatprod = REAL(mhatprodSEXP);
-
-    //internal_sparse_svd(double * Z, int r1, int c1, double lambda, double eps, int maxiter,
-                        //double * mhat, double * mhatprod, double * v, double * v2)
-
-    double* retarr = internal_sparse_svd(Z, r1, c1, lambda, eps, maxiter,
-                        mhat, mhatprod, vec1, vec2,0);
-    SEXP ret = vec2SEXP;
-    if(retarr==vec1){
-        ret = vec1SEXP;
-    }
-    UNPROTECT(5);
-    return ret;
-
-}
+/*#include "header.h"
 
 
 
 
 
-void internal_inspectOnSegment(double * cumsums, double * cusum, int * maxpos, double * maximum, int s, int e, int p, double lambda,
-    double eps, int maxiter, double * mhat, double * mhatprod, double* v, double* v2,int debug){
-    *maxpos  = e;
-    *maximum = 0.0;
-    if(e-s<2){
-        return;
-    }
-
-    // compute CUSUM
-    CUSUM(cumsums, cusum, s, e, p);
-
-    // find sparse SVD
-    //internal_sparse_svd(double * Z, int r1, int c1, double lambda, double eps, int maxiter,
-                        //double * mhat, double * mhatprod, double * v, double * v2)
-    double * projvec = internal_sparse_svd(cusum, p, e-s-1, lambda, eps, maxiter,
-                        mhat, mhatprod, v, v2,debug);
-    if(projvec==NULL){
-      if(debug){
-          printf("inspecting segment, s=%d, e=%d resulted in NULL projection. lambda = %f.\n", s,e,lambda);
-      }
-
-      return;
-    }
-    double * projected = v;
-    if(projvec==v){
-        projected = v2;
-    }
-    //double * v = REAL(retval);
-    int n = e-s;
-    double tmp;
-    internal_matmult(projvec,cusum,  projected,1, p, p, n-1);
-
-    for (int i = 0; i < n-1; ++i)
-    {
-        //t = s+i+1;
-        tmp = fabs(projected[i]);
-        if(tmp> *maximum){
-            *maximum = tmp;
-            *maxpos = s+i+1;
-        }
-    }
-    if(debug){
-        printf("inspecting segment, s=%d, e=%d, max_cusum = %f\n", s,e,*maximum);
-    }
-
-
-    return;
-}
-
-void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* changepoints,int* changepoint_counter_ptr, int * depthcounter,
+void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepoints,int* changepoint_counter_ptr, int * depthcounter,
                 double * maxval, double xi, double *cumsums, int* lens, int lenLens, double lambda,
                 double eps, int maxiter, int * segstarts, double * maxcusums, int* maxpos, int K, double * cusum, double * mhat,
                 double * mhatprod, double * v, double * v2, int debug,int * coordchg){
     if(debug){
-        printf("cInspectCall! s=%d, e=%d\n", s, e);
+        printf("cHDCD_call! s=%d, e=%d\n", s, e);
     }
 
     if(e-s<lens[0]-1){
@@ -331,7 +133,7 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
     return;
 }
 
-SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP KI,
+SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP KI,
     SEXP epsI, SEXP lambdaI, SEXP maxiterI, SEXP debugI){
     // X : p \times n
     PROTECT(XI);
@@ -488,3 +290,4 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
 }
 
 
+*/
