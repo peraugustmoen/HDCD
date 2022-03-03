@@ -1,23 +1,129 @@
 /*#include "header.h"
 
+void internal_threshold_matrix(double * matrix, int r1, int c1, double a, double nu_a, int previously_tresholded, 
+                                double prev_nu_a ){
+
+    // should be possible to optimize this code a bit
+    double a_sq = a*a;
+    double true_val = 0;
+    if (previously_tresholded)
+    {
+        for (int i = 0; i < r1; ++i)
+        {
+            for (int j = 0; j < c1; ++j)
+            {
+                if (fabs(matrix[cord_spec(i, j, r1)])>1e-10)
+                {
+                    true_val = matrix[cord_spec(i, j, r1)]+prev_nu_a;
+
+                    if (true_val>a_sq)
+                    {
+                        matrix[cord_spec(i, j, r1)] = true_val - nu_a;
+                    }
+                    else{
+                        matrix[cord_spec(i, j, r1)] = 0.0;
+                    }
+                }
+
+            }
+
+        }
+    }
+    else{
+        for (int i = 0; i < r1; ++i)
+        {
+            for (int j = 0; j < c1; ++j)
+            {
+                if (fabs(matrix[cord_spec(i, j, r1)])>a)
+                {
+                    matrix[cord_spec(i, j, r1)] = matrix[cord_spec(i, j, r1)]*matrix[cord_spec(i, j, r1)] - nu_a;
+                    
+                }
+                else{
+                    matrix[cord_spec(i, j, r1)] = 0.0;
+                }
+
+            }
+
+        }
+    }
+    
+
+}
+
+void internal_colSum(double * matrix, int r1, int c1, double * vector){
+    memset(vector, 0, c1);
+    for (int i = 0; i < r1; ++i)
+        {
+            for (int j = 0; j < c1; ++j)
+            {
+                vector[j]+=matrix[cord_spec(i, j, r1)];
+
+            }
+
+        }
+}
+void internal_check_segment(double * cumsums, double * cusum, int * maxpos, double * maximum, int * maxa_pos,
+                            int s, int e, int p, double * vector, double threshold_d, double threshold_s, int debug){
+    // require as[0] = 0
+    
+    *maxpos  = e;
+    *maximum = 0.0;
+    *maxa_pos = 0;
+    if(e-s<2){
+        return;
+    }
+
+    // compute CUSUM
+    CUSUM(cumsums, cusum, s, e, p); // dim is p \times (e-s-1)
+
+    double prev_nu_a = 0.0;
+    double threshold = threshold_d;
+    //int n = e-s;
+    for (int i = 0; i < len_as; ++i)
+    {
+        if (i==1)
+        {
+            threshold = threshold_s;
+        }
+        a = as[i];
+        nu_a = nu_as[i];
+        internal_threshold_matrix(cusum, p, e-s-1, a, nu_a, i>0, prev_nu_a );
+        internal_colSum(cusum, p, e-s-1, vector);
+        for (int i = 0; i < e-s-1; ++i)
+        {
+            //t = s+i+1;
+            tmp = vector[i] / threshold;
+            if(tmp> *maximum){
+                *maximum = tmp;
+                *maxpos = s+i+1;
+                *maxa_pos = i;
+            }
+        }
 
 
+    }
+
+
+    return;
+}
 
 
 void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepoints,int* changepoint_counter_ptr, int * depthcounter,
-                double * maxval, double xi, double *cumsums, int* lens, int lenLens, double lambda,
-                double eps, int maxiter, int * segstarts, double * maxcusums, int* maxpos, int K, double * cusum, double * mhat,
-                double * mhatprod, double * v, double * v2, int debug,int * coordchg){
+                double * maxval, double threshold_d, double threshold_s , double *cumsums, int* lens, int lenLens, double * as, double * nu_as, int len_as,
+                int * segstarts, double * maxvalues, int* maxpos, int K, double * cusum, double * matrix,
+                double * vector,  int debug,int * coordchg){
     if(debug){
         printf("cHDCD_call! s=%d, e=%d\n", s, e);
     }
 
-    if(e-s<lens[0]-1){
+    if(e-s<lens[0]){
         //printf("segment too short\n");
         return;
     }
     int argmax = s;
     double maximum = 0;
+    double maxa_pos = 0;
 
     //int tmpargmax;
     //double tmpmaximum;
@@ -30,9 +136,10 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
 
     int j_max=0;
     int k_max = 0;
+
     for (int j = 0; j < lenLens; ++j)
     {
-        len = lens[j]-1;
+        len = lens[j];
         if(debug){
             printf("j=%d, len = %d\n", j, len);
         }
@@ -50,32 +157,35 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
         {
             i = segstarts[cord_spec(k,j,n)];
 
-            if (i<s)
+            if(i>e-len || i<-1){
+                break;
+            }
+            else if (i<s)
             {
                 continue;
             }
-            else if(i>e-len){
-                break;
-            }
 
             if(debug){
-                printf("maxcusums[%d, %d] = %f\n", k , j , maxcusums[cord_spec(k,j,n)]);
+                //printf("maxvalues[%d, %d] = %f\n", k , j , maxvalues[cord_spec(k,j,n)]);
             }
 
-            if(maxcusums[cord_spec(k,j,n)]<=0.0){
+            if(maxvalues[cord_spec(k,j,n)]<=0.0){
                 //this segment not computed!
                 //inspectOnSegment(cumsums, cusum, &tmpargmax, &tmpmaximum, s, e, p, lambda,
                  //   eps, maxiter, projvec, cusum_proj);
                  //double * cumsums, double * cusum, int * maxpos, double * maximum,
-                 internal_inspectOnSegment(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxcusums[cord_spec(k,j,n)]), i, i+len, p,
-                 lambda,
-                        eps, maxiter, mhat, mhatprod, v, v2,debug);
+                 internal_check_segment(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxvalues[cord_spec(k,j,n)]), &(maxas[cord_spec(k,j,n)]),
+                            i, i+len, p, vector, threshold_d,threshold_s, debug);
+                 //internal_inspectOnSegment(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxvalues[cord_spec(k,j,n)]), i, i+len, p,
+                 //lambda,
+                //      eps, maxiter, mhat, mhatprod, v, v2,debug);
             }
 
-            tmp = maxcusums[cord_spec(k,j,n)];
+            tmp = maxvalues[cord_spec(k,j,n)];
             if(tmp>maximum){
                 maximum = tmp;
                 argmax = maxpos[cord_spec(k,j,n)];
+                maxa_pos = maxas[cord_spec(k,j,n)];
                 j_max = j;
                 k_max=k;
                 //found=1;
@@ -84,7 +194,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
 
         }
 
-        if(maximum>xi){
+        if(maximum>1.0){
             break;
         }
     }
@@ -92,16 +202,19 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
         printf("maximum=%f\n", maximum);
     }
 
-    if(maximum > xi){
+    if(maximum > 1.0){
         if(debug){
-            printf("!!!!!! declared change-point in %d. val = %f, thresh =%f\n", argmax, maximum, xi);
+            printf("!!!!!! declared change-point in %d. val = %f", argmax, maximum);
         }
         // identify in which coordinates the change happens:
         i = segstarts[cord_spec(k_max,j_max,n)];
-        len = lens[j_max]-1;
+        len = lens[j_max];
         int ss = i;
         int ee = i+len;
-        CUSUM(cumsums, cusum, ss, ee, p);
+        CUSUM(cumsums, cusum, , ee, p);
+        internal_threshold_matrix(double * matrix, int r1, int c1, double a, double nu_a, int previously_tresholded, 
+                                double prev_nu_a )
+
         double * projvec = internal_sparse_svd(cusum, p, ee-ss-1, lambda, eps, maxiter,
                         mhat, mhatprod, v, v2,debug);
         for (int zz = 0; zz < p; ++zz)
@@ -119,13 +232,13 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
         //        adaptTresh, cumsums, lens, lenLens, K, cusum,  mhat, mhatprod, v, v2);
         cInspect_call(x, s, argmax, n, p, depth+1, changepoints, changepoint_counter_ptr, depthcounter,
                 maxval,xi, cumsums, lens, lenLens, lambda,
-                eps, maxiter, segstarts, maxcusums, maxpos, K,  cusum, mhat,
+                eps, maxiter, segstarts, maxvalues, maxpos, K,  cusum, mhat,
                 mhatprod, v, v2,debug,coordchg);
         //cInspect_call(x, argmax, e, n, p, depth+1, changepoints, changepoint_counter_ptr, depthcounter,  maxval, threshold,
         //        adaptTresh, cumsums, lens, lenLens, K, cusum, mhat, mhatprod, v, v2);
         cInspect_call(x, argmax, e, n, p, depth+1, changepoints, changepoint_counter_ptr, depthcounter,
                 maxval,xi, cumsums, lens, lenLens, lambda,
-                eps, maxiter, segstarts, maxcusums, maxpos, K,  cusum, mhat,
+                eps, maxiter, segstarts, maxvalues, maxpos, K,  cusum, mhat,
                 mhatprod, v, v2,debug,coordchg);
 
     }
@@ -225,9 +338,9 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP KI,
     // unecessary
 
 
-    SEXP maxcusumsSEXP = PROTECT(allocVector(REALSXP, n*lenLens));
-    double * maxcusums = REAL(maxcusumsSEXP);
-    memset(maxcusums, 0, sizeof(double)*n*lenLens);
+    SEXP maxvaluesSEXP = PROTECT(allocVector(REALSXP, n*lenLens));
+    double * maxvalues = REAL(maxvaluesSEXP);
+    memset(maxvalues, 0, sizeof(double)*n*lenLens);
     SEXP maxposSEXP = PROTECT(allocVector(INTSXP, n*lenLens));
     int * maxpos = INTEGER(maxposSEXP);
     memset(maxpos, 0, sizeof(int)*n*lenLens);
@@ -242,16 +355,16 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP KI,
     {
         counter=0;
 
-        len = lens[j]-1; //len here is -1 of the len in text
+        len = lens[j]; //len here is -1 of the len in text
         jump = len/K;
         if(jump<1){
             jump=1;
         }
 
-        for (int i = 0; i < (n-len); i+=jump)
+        for (int i = -1; i <= (n-len); i+=jump)
         {
             //cord_spec(r,c, D) ((r) + (D)*(c))
-            //compute_cusum(cumsum, i, i+len, &(maxpos[cord_spec(i,j,n)]), &(maxcusums[cord_spec(i,j,n)]));
+            //compute_cusum(cumsum, i, i+len, &(maxpos[cord_spec(i,j,n)]), &(maxvalues[cord_spec(i,j,n)]));
             segstarts[cord_spec(counter++,j,n)] = i;
             if(debug){
                 printf("segstarts[%d, %d] = %d\n",counter-1, j, i );
@@ -263,9 +376,9 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP KI,
 
 
 
-    cInspect_call(X, 0, n, n, p, 1, changepoints, changepoint_counter_ptr, depthcounter,
+    cHDCD_call(X, 0, n, n, p, 1, changepoints, changepoint_counter_ptr, depthcounter,
                 maxval, xi, cumsums, lens, lenLens, lambda,
-                eps, maxiter, segstarts, maxcusums, maxpos, K, cusum, mhat,
+                eps, maxiter, segstarts, maxvalues, maxpos, K, cusum, mhat,
                 mhatprod, v, v2,debug,coordchg);
 
     // return:

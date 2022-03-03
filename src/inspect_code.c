@@ -210,7 +210,7 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
         printf("cInspectCall! s=%d, e=%d\n", s, e);
     }
 
-    if(e-s<lens[0]-1){
+    if(e-s<lens[0]){
         //printf("segment too short\n");
         return;
     }
@@ -230,7 +230,7 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
     int k_max = 0;
     for (int j = 0; j < lenLens; ++j)
     {
-        len = lens[j]-1;
+        len = lens[j];
         if(debug){
             printf("j=%d, len = %d\n", j, len);
         }
@@ -248,12 +248,12 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
         {
             i = segstarts[cord_spec(k,j,n)];
 
-            if (i<s)
+            if(i>e-len || i<-1){
+                break;
+            }
+            else if (i<s)
             {
                 continue;
-            }
-            else if(i>e-len){
-                break;
             }
 
             if(debug){
@@ -296,7 +296,7 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
         }
         // identify in which coordinates the change happens:
         i = segstarts[cord_spec(k_max,j_max,n)];
-        len = lens[j_max]-1;
+        len = lens[j_max];
         int ss = i;
         int ee = i+len;
         CUSUM(cumsums, cusum, ss, ee, p);
@@ -431,7 +431,7 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
     memset(maxpos, 0, sizeof(int)*n*lenLens);
     SEXP segstartsSEXP = PROTECT(allocVector(INTSXP, n*lenLens));
     int * segstarts = INTEGER(segstartsSEXP);
-    memset(segstarts, 0, sizeof(int)*n*lenLens);
+    memset(segstarts, -2, sizeof(int)*n*lenLens);
 
     int len;
     int jump;
@@ -440,13 +440,13 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
     {
         counter=0;
 
-        len = lens[j]-1; //len here is -1 of the len in text
+        len = lens[j]; //len here is -1 of the len in text
         jump = len/K;
         if(jump<1){
             jump=1;
         }
 
-        for (int i = 0; i < (n-len); i+=jump)
+        for (int i = -1; i <= (n-len); i+=jump)
         {
             //cord_spec(r,c, D) ((r) + (D)*(c))
             //compute_cusum(cumsum, i, i+len, &(maxpos[cord_spec(i,j,n)]), &(maxcusums[cord_spec(i,j,n)]));

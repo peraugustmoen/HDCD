@@ -17,8 +17,8 @@ X = mus+noise
 # while lambda = sqrt(log(p*log(n))/2) is what wang and samworth recommend in practice. 
 
 xi = 4*sqrt(log(p*n))
-lambda = sqrt(log(p*log(n))/2)
-#lambda = 4*sqrt(log(p*n))
+#lambda = sqrt(log(p*log(n))/2)
+lambda = 4*sqrt(log(p*n))
 
 res = Inspect(X, xi=xi, alpha = 1.2, K = 10,eps=1e-10,
                 lambda = lambda, maxiter=10000,debug=FALSE)
