@@ -382,7 +382,7 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
 
     SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
     double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
-    memset(cumsums, 0, p*sizeof(double));
+    memset(cumsums, 0, p*(n+1)*sizeof(double));
 
     for (int j = 1; j <=n; ++j)
     {

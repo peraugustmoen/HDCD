@@ -301,7 +301,7 @@ SEXP CUSUM_R(SEXP XI, SEXP sI, SEXP eI, SEXP pI, SEXP nI){
 
 	SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
     double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
-    memset(cumsums, 0, p*sizeof(double));
+    memset(cumsums, 0, p*(n+1)*sizeof(double));
 
     SEXP cusumSEXP = PROTECT(allocVector(REALSXP, p * (n-1)));
     double *cusum = REAL(cusumSEXP); // p \times (n+1). first col is 0
