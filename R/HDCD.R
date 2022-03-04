@@ -1,5 +1,4 @@
 #' @useDynLib HDCD cHDCD
-#' @useDynLib HDCD CUSUM_R
 #' @export
 HDCD = function(X, threshold_d, threshold_s, alpha = 1+1/6, K = 7, debug =FALSE){
   p = dim(X)[1]
@@ -29,6 +28,7 @@ HDCD = function(X, threshold_d, threshold_s, alpha = 1+1/6, K = 7, debug =FALSE)
   nu_as = 1 + as*exp(dnorm(as, log=TRUE)-pnorm(as, lower.tail = FALSE, log=TRUE))
   thresholds = nu_as[]
   thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)*p*log(n)/ss[2:length(ss)]^2), log(n))
+  #thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)*p*log(n*log(sqrt(p*log(n)),2))/ss[2:length(ss)]^2), log(n*log(sqrt(p*log(n)),2)))
   thresholds[1] = threshold_d * sqrt(p*log(n))
   
   #lens[7]=round(log(n)^2)
@@ -39,21 +39,25 @@ HDCD = function(X, threshold_d, threshold_s, alpha = 1+1/6, K = 7, debug =FALSE)
               as.integer(lens),as.integer(length(lens)), as.integer(K), as,nu_as, 
               as.integer(length(as)), as.integer(debug))
   
-  num_nonzero = sum(res$changepoints!=0)
-  res$changepoints = res$changepoints[1:num_nonzero]
+  num_nonzero = sum(res$changepoints!=-1)
+  if(num_nonzero==0){
+    res$changepoints = c()
+    res$CUSUMval = c()
+    res$depth = c()
+    res$coordinate = c()
+    return(res)
+  }
+  
+  res$changepoints = res$changepoints[1:num_nonzero]+1
   res$CUSUMval = res$CUSUMval[1:num_nonzero]
   res$depth = res$depth[1:num_nonzero]
+  res$coordinate = matrix(res$coordinate,nrow = p, ncol=n)
+  #res$coordinate = res$coordinate[, 1:num_nonzero]
   srt_indices = sort(res$changepoints, decreasing =FALSE, index.return=TRUE)$ix
   res$changepoints = res$changepoints[srt_indices]
   res$CUSUMval = res$CUSUMval[srt_indices]
   res$depth = res$depth[srt_indices]
-  if(num_nonzero==0){
-    res$coordinate = NULL
-  }
-  else{
-    res$coordinate = matrix(res$coordinate,nrow = p, ncol=n)
-    res$coordinate = res$coordinate[,1:num_nonzero]
-  }
+  res$coordinate = res$coordinate[,srt_indices]
 
   return(res)
 }
