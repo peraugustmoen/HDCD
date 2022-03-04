@@ -171,7 +171,7 @@ void internal_inspectOnSegment(double * cumsums, double * cusum, int * maxpos, d
                         mhat, mhatprod, v, v2,debug);
     if(projvec==NULL){
       if(debug){
-          printf("inspecting segment, s=%d, e=%d resulted in NULL projection. lambda = %f.\n", s,e,lambda);
+          Rprintf("inspecting segment, s=%d, e=%d resulted in NULL projection. lambda = %f.\n", s,e,lambda);
       }
 
       return;
@@ -195,7 +195,7 @@ void internal_inspectOnSegment(double * cumsums, double * cusum, int * maxpos, d
         }
     }
     if(debug){
-        printf("inspecting segment, s=%d, e=%d, max_cusum = %f\n", s,e,*maximum);
+        Rprintf("inspecting segment, s=%d, e=%d, max_cusum = %f\n", s,e,*maximum);
     }
 
 
@@ -207,11 +207,11 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
                 double eps, int maxiter, int * segstarts, double * maxcusums, int* maxpos, int K, double * cusum, double * mhat,
                 double * mhatprod, double * v, double * v2, int debug,int * coordchg){
     if(debug){
-        printf("cInspectCall! s=%d, e=%d\n", s, e);
+        Rprintf("cInspectCall! s=%d, e=%d\n", s, e);
     }
 
     if(e-s<lens[0]){
-        //printf("segment too short\n");
+        //Rprintf("segment too short\n");
         return;
     }
     int argmax = s;
@@ -232,7 +232,7 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
     {
         len = lens[j];
         if(debug){
-            printf("j=%d, len = %d\n", j, len);
+            Rprintf("j=%d, len = %d\n", j, len);
         }
 
         jump = len /K;
@@ -257,7 +257,7 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
             }
 
             if(debug){
-                printf("maxcusums[%d, %d] = %f\n", k , j , maxcusums[cord_spec(k,j,n)]);
+                Rprintf("maxcusums[%d, %d] = %f\n", k , j , maxcusums[cord_spec(k,j,n)]);
             }
 
             if(maxcusums[cord_spec(k,j,n)]<=0.0){
@@ -287,12 +287,12 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
         }
     }
     if(debug){
-        printf("maximum=%f\n", maximum);
+        Rprintf("maximum=%f\n", maximum);
     }
 
     if(maximum > xi){
         if(debug){
-            printf("!!!!!! declared change-point in %d. val = %f, thresh =%f\n", argmax, maximum, xi);
+            Rprintf("!!!!!! declared change-point in %d. val = %f, thresh =%f\n", argmax, maximum, xi);
         }
         // identify in which coordinates the change happens:
         i = segstarts[cord_spec(k_max,j_max,n)];
@@ -359,13 +359,13 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
     int debug = *INTEGER(debugI);
     UNPROTECT(10); // unprotecting all except X and lens
     if(debug){
-      printf("p = %d\n", p);
-      printf("lambda = %f\n", lambda);
+      Rprintf("p = %d\n", p);
+      Rprintf("lambda = %f\n", lambda);
     }
 
     SEXP out = PROTECT(allocVector(INTSXP, n));
     int * changepoints = INTEGER(out); //pointer to array
-    memset(changepoints, 0, sizeof(int)*n);
+    memset(changepoints, -1, sizeof(int)*n);
     int changepoint_counter = 0;
     int* changepoint_counter_ptr = &changepoint_counter;
     SEXP maxvalSEXP = PROTECT(allocVector(REALSXP, n));
@@ -446,13 +446,13 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
             jump=1;
         }
 
-        for (int i = -1; i <= (n-len); i+=jump)
+        for (int i = -1; i < (n-len); i+=jump)
         {
             //cord_spec(r,c, D) ((r) + (D)*(c))
             //compute_cusum(cumsum, i, i+len, &(maxpos[cord_spec(i,j,n)]), &(maxcusums[cord_spec(i,j,n)]));
             segstarts[cord_spec(counter++,j,n)] = i;
             if(debug){
-                printf("segstarts[%d, %d] = %d\n",counter-1, j, i );
+                Rprintf("segstarts[%d, %d] = %d\n",counter-1, j, i );
             }
 
 
@@ -461,7 +461,7 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
 
 
 
-    cInspect_call(X, 0, n, n, p, 1, changepoints, changepoint_counter_ptr, depthcounter,
+    cInspect_call(X, -1, n-1, n, p, 1, changepoints, changepoint_counter_ptr, depthcounter,
                 maxval, xi, cumsums, lens, lenLens, lambda,
                 eps, maxiter, segstarts, maxcusums, maxpos, K, cusum, mhat,
                 mhatprod, v, v2,debug,coordchg);

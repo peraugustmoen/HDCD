@@ -276,13 +276,47 @@ void CUSUM(double * cumsums, double * cusum, int s, int e, int p){
         for (int j = 1; j < n; ++j)
         {
             t = s+j;
-            cusum[cord_spec(i,j-1, p)] = sqrt(((double)(e-t))/((e-s)*(t-s))) *(cumsums[cord_spec(i,t,p)]-cumsums[cord_spec(i,s,p)])
-            - sqrt(((double)(t-s))/((e-s)*(e-t)))*(cumsums[cord_spec(i,e,p)] - cumsums[cord_spec(i,t,p)]);
+            cusum[cord_spec(i,j-1, p)] = sqrt(((double)(e-t))/((e-s)*(t-s))) *(cumsums[cord_spec(i,t+1,p)]-cumsums[cord_spec(i,s+1,p)])
+            - sqrt(((double)(t-s))/((e-s)*(e-t)))*(cumsums[cord_spec(i,e+1,p)] - cumsums[cord_spec(i,t+1,p)]);
 
         }
 
     }
 
     return;
+}
+
+SEXP CUSUM_R(SEXP XI, SEXP sI, SEXP eI, SEXP pI, SEXP nI){
+	PROTECT(XI);
+	PROTECT(sI);
+	PROTECT(eI);
+	PROTECT(pI);
+	PROTECT(nI);
+	int s = *(INTEGER(sI));
+	int p = *(INTEGER(pI));
+	int e = *(INTEGER(eI));
+	int n = *(INTEGER(nI));
+	UNPROTECT(4);
+	double * X = REAL(XI);
+
+	SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
+    double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
+    memset(cumsums, 0, p*sizeof(double));
+
+    SEXP cusumSEXP = PROTECT(allocVector(REALSXP, p * (n-1)));
+    double *cusum = REAL(cusumSEXP); // p \times (n+1). first col is 0
+    memset(cusum, 0, p*sizeof(double)*(n-1));
+
+    for (int j = 1; j <=n; ++j)
+    {
+        for (int i = 0; i < p; ++i)
+        {
+            //#define cord_spec(r,c, D) ((r) + (D)*(c))
+            cumsums[cord_spec(i,j,p)] = X[cord_spec(i,j-1, p)] +cumsums[cord_spec(i,j-1, p)];
+        }
+    }
+    CUSUM(cumsums, cusum, s, e, p);
+    UNPROTECT(3);
+    return(cusumSEXP);
 }
 
