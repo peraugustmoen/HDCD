@@ -1,5 +1,6 @@
 #### check inspect
 library(HDCD)
+
 # #multiple change-points:
 # p = 100
 # n =600
