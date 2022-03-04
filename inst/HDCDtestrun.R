@@ -30,7 +30,7 @@ library(HDCD)
 
 
 p = 100
-n =50
+n =200
 mus = matrix(0, nrow=p, ncol=n)
 noise = matrix(rnorm(n*p), nrow=p, ncol=n)
 
