@@ -251,16 +251,29 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
         //len = lens[j_max];
         //int ss = i;
         //int ee = i+len;
-        CUSUM(cumsums, cusum, argmax-1, argmax+1, p);
-        internal_threshold_matrix(cusum, p, 1, as[maxa_pos],  nu_as[maxa_pos], 0,
-                                0 );
-
-
-        for (int zz = 0; zz < p; ++zz)
-        {
-            if(cusum[zz]>1e-10){
+        if(maxa_pos==0){
+            for (int zz = 0; zz < p; ++zz)
+            {
                 coordchg[cord_spec(zz,*changepoint_counter_ptr, p)]=1;
             }
+        }
+        else{
+            i = segstarts[cord_spec(k_max,j_max,n)];
+            len = lens[j_max];
+            int ss = i;
+            int ee = i+len;
+            CUSUM(cumsums, cusum, ss, ee, p);
+            internal_threshold_matrix(&(cusum[cord_spec(0,argmax-ss-1,p)]), p, 1, as[maxa_pos],  nu_as[maxa_pos], 0,
+                                    0 );
+
+
+            for (int zz = 0; zz < p; ++zz)
+            {
+                if(cusum[zz]>1e-10){
+                    coordchg[cord_spec(zz,*changepoint_counter_ptr, p)]=1;
+                }
+            }
+
         }
 
         changepoints[*changepoint_counter_ptr] = argmax;
