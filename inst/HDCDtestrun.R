@@ -3,7 +3,7 @@ library(HDCD)
 
 #multiple change-points:
 p = 1000
-n =1000
+n =100
 mus = matrix(0, nrow=p, ncol=n)
 noise = matrix(rnorm(n*p), nrow=p, ncol=n)
 etas = c(round(n/3),round(2*n/3))
@@ -24,7 +24,7 @@ res = Inspect(X, xi=xi, alpha = 1.2, K = 10,eps=1e-10,
               lambda = lambda, maxiter=10000,debug=FALSE)
 res$changepoints
 
-res2 = HDCD (X, 4, 2, alpha = 1+1/6, K = 7, debug =FALSE)
+res2 = HDCD (X, 8, 2, alpha = 1+1/6, K = 7, debug =FALSE)
 res2$changepoints
 res2$coordinate
 res2$CUSUMval
