@@ -301,11 +301,28 @@ SEXP CUSUM_R(SEXP XI, SEXP sI, SEXP eI, SEXP pI, SEXP nI){
 
 	SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
     double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
-    memset(cumsums, 0, p*(n+1)*sizeof(double));
+    //memset(cumsums, 0, p*(n+1)*sizeof(double));
 
     SEXP cusumSEXP = PROTECT(allocVector(REALSXP, p * (n-1)));
     double *cusum = REAL(cusumSEXP); // p \times (n+1). first col is 0
-    memset(cusum, 0, p*sizeof(double)*(n-1));
+    //memset(cusum, 0, p*sizeof(double)*(n-1));
+    //
+    for (int j = 0; j <= n; ++j)
+    {
+        for (int i = 0; i < p; ++i)
+        {
+            cumsums[cord_spec(i,j,p)]=0;
+        }
+    }
+
+    for (int j = 0; j < n-1; ++j)
+    {
+        for (int i = 0; i < p; ++i)
+        {
+            cusum[cord_spec(i,j,p)]=0;
+        }
+    }
+
 
     for (int j = 1; j <=n; ++j)
     {

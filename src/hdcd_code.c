@@ -100,7 +100,7 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
         for (int j = 0; j < e-s-1; ++j)
         {
             //t = s+i+1;
-            tmp = vector[j] / thresholds[i];
+            tmp = vector[j] -thresholds[i];
             if(tmp> *maximum){
                 *maximum = tmp;
                 *maxpos = s+j+1;
@@ -134,7 +134,8 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
 void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepoints,int* changepoint_counter_ptr, int * depthcounter,
                 double * thresholds, double *cumsums, int* lens, int lenLens, double * as, double * nu_as, int len_as,
                 int * segstarts, double * maxvalues, int* maxpos,int * maxas, int K, double * cusum,
-                double * vector, int * coordchg, double * maxval, int debug){
+                double * vector, int * coordchg, double * maxval, int * startpoints, int* endpoints, int* maxaposes,
+                int debug){
     if(debug){
         Rprintf("cHDCD_call! s=%d, e=%d\n", s, e);
     }
@@ -230,7 +231,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
 
         }
 
-        if(maximum>1.0){
+        if(maximum>0.0){
             break;
         }
     }
@@ -269,7 +270,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
 
             for (int zz = 0; zz < p; ++zz)
             {
-                if(cusum[zz]>1e-10){
+                if(cusum[cord_spec(0,argmax-ss-1,p)+zz]>1e-10){
                     coordchg[cord_spec(zz,*changepoint_counter_ptr, p)]=1;
                 }
             }
@@ -279,6 +280,9 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
         changepoints[*changepoint_counter_ptr] = argmax;
         depthcounter[*changepoint_counter_ptr] = depth;
         maxval[*changepoint_counter_ptr] = maximum;
+        startpoints[*changepoint_counter_ptr] = segstarts[cord_spec(k_max,j_max,n)];
+        endpoints[*changepoint_counter_ptr] = segstarts[cord_spec(k_max,j_max,n)] + lens[j_max];
+        maxaposes[*changepoint_counter_ptr] = maxa_pos;
         (*changepoint_counter_ptr)++;
         if(*changepoint_counter_ptr >n){
           return;
@@ -289,10 +293,12 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
         //        double * vector, int * coordchg, int debug)
         cHDCD_call(x, s, argmax, n, p, depth+1, changepoints,changepoint_counter_ptr,  depthcounter,
                 thresholds , cumsums, lens, lenLens,  as, nu_as, len_as,
-                segstarts, maxvalues, maxpos,maxas, K, cusum, vector, coordchg, maxval, debug);
+                segstarts, maxvalues, maxpos,maxas, K, cusum, vector, coordchg, maxval, 
+                startpoints, endpoints, maxaposes,debug);
         cHDCD_call(x, argmax, e,n, p, depth+1, changepoints,changepoint_counter_ptr,  depthcounter,
                 thresholds , cumsums, lens, lenLens,  as, nu_as, len_as,
-                segstarts, maxvalues, maxpos,maxas, K, cusum, vector, coordchg, maxval, debug);
+                segstarts, maxvalues, maxpos,maxas, K, cusum, vector, coordchg, maxval,
+                startpoints, endpoints, maxaposes, debug);
 
     }
 
@@ -342,6 +348,15 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP lensI,SEXP lenLensI,S
     SEXP maxvalSEXP = PROTECT(allocVector(REALSXP, n));
     double * maxval = REAL(maxvalSEXP); //pointer to array
     memset(maxval, 0, sizeof(double)*n);
+    SEXP startpointsSEXP = PROTECT(allocVector(INTSXP, n));
+    int * startpoints = INTEGER(startpointsSEXP); //pointer to array
+    memset(startpoints, 0, sizeof(int)*n);
+    SEXP endpointsSEXP = PROTECT(allocVector(INTSXP, n));
+    int * endpoints = INTEGER(endpointsSEXP); //pointer to array
+    memset(endpoints, 0, sizeof(int)*n);
+    SEXP maxaposesSEXP = PROTECT(allocVector(INTSXP, n));
+    int * maxaposes = INTEGER(maxaposesSEXP); //pointer to array
+    memset(maxaposes, 0, sizeof(int)*n);
     SEXP depthcounterSEXP= PROTECT(allocVector(INTSXP, n));
     int * depthcounter = INTEGER(depthcounterSEXP); //pointer to array
     memset(depthcounter, 0, sizeof(int)*n);
@@ -454,7 +469,8 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP lensI,SEXP lenLensI,S
 
     cHDCD_call(X, -1, n-1, n, p, 1, changepoints,changepoint_counter_ptr,  depthcounter,
                 thresholds , cumsums, lens, lenLens,  as, nu_as, len_as,
-                segstarts, maxvalues, maxpos, maxas, K, cusum, vector, coordchg,maxval, debug);
+                segstarts, maxvalues, maxpos, maxas, K, cusum, vector, coordchg,maxval, 
+                startpoints, endpoints, maxaposes, debug);
 
 /*    cInspect_call(X, -1, n-1, n, p, 1, changepoints, changepoint_counter_ptr, depthcounter,
                 maxval, xi, cumsums, lens, lenLens, lambda,
@@ -462,22 +478,28 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP lensI,SEXP lenLensI,S
                 mhatprod, v, v2,debug,coordchg);
 */
     // return:
-    SEXP ret = PROTECT(allocVector(VECSXP, 4)); //the list to be returned in R
+    SEXP ret = PROTECT(allocVector(VECSXP, 7)); //the list to be returned in R
     SET_VECTOR_ELT(ret, 0, out);
     SET_VECTOR_ELT(ret, 1, maxvalSEXP);
     SET_VECTOR_ELT(ret, 2, depthcounterSEXP);
     SET_VECTOR_ELT(ret, 3, coordschgSEXP);
+    SET_VECTOR_ELT(ret, 4, startpointsSEXP);
+    SET_VECTOR_ELT(ret, 5, endpointsSEXP);
+    SET_VECTOR_ELT(ret, 6, maxaposesSEXP);
 
     // creating list of names/titles to be returned in the output list
-    SEXP names = PROTECT(allocVector(STRSXP, 4));
+    SEXP names = PROTECT(allocVector(STRSXP, 7));
     //SET_STRING_ELT(names, 0, mkChar("CUSUM"));
     SET_STRING_ELT(names, 0, mkChar("changepoints"));
     SET_STRING_ELT(names, 1, mkChar("CUSUMval"));
     SET_STRING_ELT(names, 2, mkChar("depth"));
     SET_STRING_ELT(names, 3, mkChar("coordinate"));
+    SET_STRING_ELT(names, 4, mkChar("startpoints"));
+    SET_STRING_ELT(names, 5, mkChar("endpoints"));
+    SET_STRING_ELT(names, 6, mkChar("maxaposes"));
 
     setAttrib(ret, R_NamesSymbol, names);
 
-    UNPROTECT(18);
+    UNPROTECT(21);
     return ret;
 }
