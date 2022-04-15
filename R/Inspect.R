@@ -31,24 +31,19 @@ Inspect = function(X, lambda, xi, alpha = 1+1/6, K = 7,eps=1e-10,
   res = .Call(cInspect, X,as.integer(n), as.integer(p), xi,
               as.integer(lens),as.integer(length(lens)), as.integer(K), eps, lambda, as.integer(maxiter),
               as.integer(debug))
-  num_nonzero = sum(res$changepoints!=-1)
-  if(num_nonzero==0){
-    res$changepoints = c()
-    res$CUSUMval = c()
-    res$depth = c()
-    res$coordinate = c()
-    return(res)
+  if(res$changepointnumber==0){
+    return(NULL)
   }
   
-  res$changepoints = res$changepoints[1:num_nonzero]+1
-  res$CUSUMval = res$CUSUMval[1:num_nonzero]
-  res$depth = res$depth[1:num_nonzero]
+  res$changepoints = as.integer(res$changepoints[1:res$changepointnumber]+1)
+  res$CUSUMval = res$CUSUMval[1:res$changepointnumber]
+  res$depth = as.integer(res$depth[1:res$changepointnumber])
   res$coordinate = matrix(res$coordinate,nrow = p, ncol=n)
   #res$coordinate = res$coordinate[, 1:num_nonzero]
-  srt_indices = sort(res$changepoints, decreasing =FALSE, index.return=TRUE)$ix
-  res$changepoints = res$changepoints[srt_indices]
+  srt_indices = as.integer(sort(res$changepoints, decreasing =FALSE, index.return=TRUE)$ix)
+  res$changepoints = as.integer(res$changepoints[srt_indices])
   res$CUSUMval = res$CUSUMval[srt_indices]
-  res$depth = res$depth[srt_indices]
+  res$depth = as.integer(res$depth[srt_indices])
   res$coordinate = res$coordinate[,srt_indices]
 
   return(res)

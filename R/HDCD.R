@@ -28,7 +28,9 @@ HDCD = function(X, threshold_d, threshold_s, alpha = 1+1/6, K = 7, debug =FALSE)
   nu_as = 1 + as*exp(dnorm(as, log=TRUE)-pnorm(as, lower.tail = FALSE, log=TRUE))
   thresholds = nu_as[]
   
-  thresholds[2:length(ss)] = threshold_s*(ss[2:length(ss)]*log(exp(1)*p*log(n^4)/ss[2:length(ss)]^2)+ log(n^4))
+  #thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)*p*log(n^4)/ss[2:length(ss)]^2), log(n^4))
+  thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)-1 + sqrt(p*log(n^4))/ss[2:length(ss)]), log(n^4))
+  
   #thresholds[2:length(ss)] = threshold_s*(sqrt(p*exp(-as[2:length(ss)]^2/2)*log(n^4))+ log(n^4))
   
   
@@ -43,32 +45,26 @@ HDCD = function(X, threshold_d, threshold_s, alpha = 1+1/6, K = 7, debug =FALSE)
               as.integer(lens),as.integer(length(lens)), as.integer(K), as,nu_as, 
               as.integer(length(as)), as.integer(debug))
   
-  num_nonzero = sum(as.integer(res$changepoints)!=-1)
-  if(num_nonzero==0){
-    res$changepoints = c()
-    res$CUSUMval = c()
-    res$depth = c()
-    res$coordinate = c()
-    res$startpoints = c()
-    res$endpoints = c()
-    res$thresholdlevel = c()
-    return(res)
+  
+  if(res$changepointnum==0){
+    return(NULL)
   }
   
-  res$changepoints = res$changepoints[1:num_nonzero]+1
-  res$CUSUMval = res$CUSUMval[1:num_nonzero]
-  res$depth = res$depth[1:num_nonzero]
+  
+  res$changepoints = as.integer(res$changepoints[1:res$changepointnum]+1)
+  res$CUSUMval = res$CUSUMval[1:res$changepointnum]
+  res$depth = as.integer(res$depth[1:res$changepointnum])
   res$coordinate = matrix(res$coordinate,nrow = p, ncol=n)
   #res$coordinate = res$coordinate[, 1:num_nonzero]
-  srt_indices = sort(res$changepoints, decreasing =FALSE, index.return=TRUE)$ix
-  res$changepoints = res$changepoints[srt_indices]
+  srt_indices = as.integer(sort(res$changepoints, decreasing =FALSE, index.return=TRUE)$ix)
+  res$changepoints = as.integer(res$changepoints[srt_indices])
   res$CUSUMval = res$CUSUMval[srt_indices]
-  res$depth = res$depth[srt_indices]
-  res$coordinate = res$coordinate[,srt_indices]
-  res$startpoints = res$startpoints[srt_indices]
-  res$endpoints = res$endpoints[srt_indices]
-  res$maxaposes = res$maxaposes[srt_indices]
-  res$s = ss[res$maxaposes+1]
+  res$depth = as.integer(res$depth[srt_indices])
+  res$coordinate = as.integer(res$coordinate[,srt_indices])
+  res$startpoints = as.integer(res$startpoints[srt_indices])
+  res$endpoints = as.integer(res$endpoints[srt_indices])
+  res$maxaposes = as.integer(res$maxaposes[srt_indices])
+  res$s = as.integer(ss[res$maxaposes+1])
   res$thresholds = thresholds
   
 
