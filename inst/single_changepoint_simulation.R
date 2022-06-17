@@ -418,36 +418,39 @@ inspect_time_uneven / hdcd_time_uneven
 
 
 
-# p = 1000
-# n =500
-# mus = matrix(0, nrow=p, ncol=n)
-# noise = matrix(rnorm(n*p), nrow=p, ncol=n)
-# eta = round(0.4*n)
-# k = p
-# 
-# diff = 0
-# if(k<sqrt(p*log(n^4))){
-#   rootnorm = 2/sqrt(eta)*sqrt(max(c(k*log(exp(1)*p*log(n^4)/k^2), log(n^4))))
-#   diff = rootnorm * c(sample(c(-1,1), replace=TRUE,k), rep(0,p-k))/sqrt(k)
-# }else{
-#   rootnorm = 2/sqrt(eta)*(p*log(n^4))^(1/4)
-#   diff = rootnorm * c(sample(c(-1,1), replace=TRUE,k), rep(0,p-k))/sqrt(k)
-# }
-# 
-# mus[,round(eta+1):n] = mus[,round(eta+1):n] + matrix(rep(diff, n-round(eta)) ,nrow=p)
-# 
-# plot(mus[1,])
-# X = mus+noise
-# plot(X[1,])
-# 
-# xi = 4*sqrt(log(p*n))
-# lambda = sqrt(log(p*log(n))/2) # double check this is what they recc!!!!!!!
-# 
-# res = single_Inspect(X, lambda)
-# res$pos
-# 
-# res2 = single_HDCD (X, 2,2, debug =FALSE)
-# res2$pos
-# res2$s
-# 
+p = 1000
+n =500
+mus = matrix(0, nrow=p, ncol=n)
+noise = matrix(rnorm(n*p), nrow=p, ncol=n)
+eta = round(0.4*n)
+k = 30
+
+diff = 0
+if(k<sqrt(p*log(n^4))){
+  rootnorm = 3/sqrt(eta)*sqrt(max(c(k*log(exp(1)*p*log(n^4)/k^2), log(n^4))))
+  diff = rootnorm * c(sample(c(-1,1), replace=TRUE,k), rep(0,p-k))/sqrt(k)
+}else{
+  rootnorm = 3/sqrt(eta)*(p*log(n^4))^(1/4)
+  diff = rootnorm * c(sample(c(-1,1), replace=TRUE,k), rep(0,p-k))/sqrt(k)
+}
+
+mus[,round(eta+1):n] = mus[,round(eta+1):n] + matrix(rep(diff, n-round(eta)) ,nrow=p)
+
+plot(mus[1,])
+X = mus+noise
+plot(X[1,])
+
+xi = 4*sqrt(log(p*n))
+lambda = sqrt(log(p*log(n))/2) # double check this is what they recc!!!!!!!
+
+system.time({res = single_Inspect(X, lambda)})
+res$pos
+
+system.time({res2 = single_HDCD (X, 2,1, debug =FALSE)})
+res2$pos
+res2$s
+
+system.time({res3 = single_Scan(X)})
+res3$pos
+res3$s
 

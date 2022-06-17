@@ -80,13 +80,13 @@ plot(ls, -ls*t-s*(a - thet - 2*ls*thet/(1-2*ls))^2*(1-2*ls)/2 + 2*s*ls^2*thet^2/
 
 #multiple change-points:
 #multiple change-points:
-p = 1000
-n = 1000
+p = 100
+n = 10000
 
-a = sqrt(4*log(p*log(n)))
+a = sqrt(200*log(p*log(n)))
 nu_a = 1 + a*exp(dnorm(a, log=TRUE)-pnorm(a, lower.tail = FALSE, log=TRUE))
-
-thet = seq(0, 1.2, by=0.05)*a
+nu_a = a^2+2
+thet = seq(0, 2, by=0.05)*a
 sums = matrix(NA, nrow = n, ncol = length(thet))
 for (t in 1:length(thet)) {
   for (i in 1:n) {
@@ -119,6 +119,7 @@ EE = EE + 1/2 * (thet^2-nu_a + 1)*erfc((a+thet)/sqrt(2)) + exp(-(a+thet)^2/2)*(a
 EE[EE<0] = 0
 plot(thet/a, rowmaxes, type="l")
 lines(thet/a, rowmeans, col=2)
+#lines(thet/a, p*EE, col=3)
 abline(h = 9*log(n), col=5)
 lines(thet/a, p*EE + 9*log(n) + 2*sqrt(p*EE*9*log(n)) ,col=3)
 p5 = 1/2*(thet^2)*erfc((a-thet)/sqrt(2))
@@ -133,10 +134,14 @@ plot(thet[1:10]/a, rowmaxes[1:10])
 abline(h = 9*log(n), col=2)
 lines(thet[1:10]/a, p*EE[1:10] + 9*log(n) )
 
-
+plot(thet/a, rowmaxes,type="l")
+lines(thet/a, p*EE + 9*log(n) + 2*sqrt(p*EE*9*log(n)) ,col=3)
 ## seems like mu is bounded above by p5
 # and that max A < mu + thresh (9 log n) + 2sqrt(mu * 9 log n)
 
+plot(thet/a, rowmaxes-p*EE,type="l")
+lines(thet/a, p*EE,col=2)
+lines(thet/a, 9*log(n) + 2*sqrt(p*EE*9*log(n)), col=3)
 
 
 
@@ -382,13 +387,14 @@ ss = seq(1, round(sqrt(p*log(n^4))))
 
 mu(a^2, s, a)
 a^2*t*10
+mu(a^2, s,0)
 
 # mu(a, s, a) is never above a^2*t when s<=p!
 
 
 
-n = 200000
-p = 300
+n = 2000
+p = 3000000
 s = 10
 
 t = 1
@@ -406,7 +412,7 @@ mu = function(c, s,aa){
 #ss = c(1,2,3,5,8,10,20,30,50,100,500,1000,10000,1000000,100000000,1e+10)
 ss = seq(1, round(sqrt(p*log(n^4))))
 
-cc = 16*s*log(exp(1)*p*log(n^4)/s^2)
+cc = 10*s*log(exp(1)*p*log(n^4)/s^2)
 ress = rep(NA, round(sqrt(p*log(n^4))))
 az = rep(NA, round(sqrt(p*log(n^4))))
 ss = 1:round(sqrt(p*log(n^4)))
@@ -420,7 +426,8 @@ for (t in 1:round(sqrt(p*log(n^4)))) {
 #plot(ress-az^2*ss*9 )
 plot(ress - 9*pmax(az^2*ss, log(n^4)))
 abline(v = s, col=2)
-
+cc/s/ az^2
+ress - 9*pmax(az^2*ss, log(n^4))
 
 
 

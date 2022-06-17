@@ -1,6 +1,6 @@
 #include "header.h"
 
-void internal_threshold_matrix(double * matrix, int r1, int c1, double a, double nu_a, int previously_tresholded,
+/*void internal_threshold_matrix(double * matrix, int r1, int c1, double a, double nu_a, int previously_tresholded,
                                 double prev_nu_a ){
 
     // should be possible to optimize this code a bit
@@ -62,8 +62,8 @@ void internal_colSum(double * matrix, int r1, int c1, double * vector){
         }
     }
 
-}
-void internal_check_segment(double * cumsums, double * cusum, int * maxpos, double * maximum, int * maxa_pos,
+}*/
+void internal_check_segment_Pilliat(double * cumsums, double * cusum, int * maxpos, double * maximum, int * maxa_pos,
                             int s, int e, int p, double * vector, double * thresholds, double * thresholds_test,
                             double * as, double * nu_as, int len_as, double * tmpvec, int twologn, int * ts,int debug){
     // require as[0] = 0
@@ -242,11 +242,12 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
 }
 
 
-void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepoints,int* changepoint_counter_ptr, int * depthcounter,
+void cPilliat_call(double * x, int s, int e, int n, int p, int depth, int* changepoints,int* changepoint_counter_ptr, int * depthcounter,
                 double * thresholds, double * thresholds_test, double *cumsums, int* lens, int lenLens, double * as, double * nu_as, int len_as,
                 int * segstarts, double * maxvalues, int* maxpos,int * maxas, int K, double * cusum,
                 double * vector, int * coordchg, double * maxval, int * startpoints, int* endpoints, int* maxaposes,
-                double * tmpvec, int twologn, int * ts,int debug){
+                double * tmpvec, int twologn, int * ts,
+                int * connected_components_start, int * connected_components_stop, int debug){
     if(debug){
         Rprintf("cHDCD_call! s=%d, e=%d\n", s, e);
     }
@@ -316,7 +317,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
                 //inspectOnSegment(cumsums, cusum, &tmpargmax, &tmpmaximum, s, e, p, lambda,
                  //   eps, maxiter, projvec, cusum_proj);
                  //double * cumsums, double * cusum, int * maxpos, double * maximum,
-                 internal_check_segment(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxvalues[cord_spec(k,j,n)]), &(maxas[cord_spec(k,j,n)]),
+                 internal_check_segment_Pilliat(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxvalues[cord_spec(k,j,n)]), &(maxas[cord_spec(k,j,n)]),
                             i, i+len, p, vector, thresholds, thresholds_test, as, nu_as,len_as, tmpvec, twologn, ts,debug);
                  //internal_inspectOnSegment(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxvalues[cord_spec(k,j,n)]), i, i+len, p,
                  //lambda,
@@ -378,8 +379,8 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
             int ss = i;
             int ee = i+len;
             CUSUM(cumsums, cusum, ss, ee, p);
-            internal_threshold_matrix(&(cusum[cord_spec(0,argmax-ss-1,p)]), p, 1, as[maxa_pos],  nu_as[maxa_pos], 0,
-                                    0 );
+            //internal_threshold_matrix(&(cusum[cord_spec(0,argmax-ss-1,p)]), p, 1, as[maxa_pos],  nu_as[maxa_pos], 0,
+            //                        0 );
 
 
             for (int zz = 0; zz < p; ++zz)
@@ -405,7 +406,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
         //        double threshold_d, double threshold_s , double *cumsums, int* lens, int lenLens, double * as, double * nu_as, int len_as,
         //        int * segstarts, double * maxvalues, int* maxpos, int K, double * cusum, double * matrix,
         //        double * vector, int * coordchg, int debug)
-        cHDCD_call(x, s, argmax, n, p, depth+1, changepoints,changepoint_counter_ptr,  depthcounter,
+        /*cHDCD_call(x, s, argmax, n, p, depth+1, changepoints,changepoint_counter_ptr,  depthcounter,
                 thresholds, thresholds_test, cumsums, lens, lenLens,  as, nu_as, len_as,
                 segstarts, maxvalues, maxpos,maxas, K, cusum, vector, coordchg, maxval, 
                 startpoints, endpoints, maxaposes, tmpvec,twologn, ts,debug);
@@ -413,13 +414,13 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
                 thresholds , thresholds_test, cumsums, lens, lenLens,  as, nu_as, len_as,
                 segstarts, maxvalues, maxpos,maxas, K, cusum, vector, coordchg, maxval,
                 startpoints, endpoints, maxaposes, tmpvec, twologn, ts,debug);
-
+*/
     }
 
     return;
 }
 
-SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEXP lensI,SEXP lenLensI,SEXP KI,
+SEXP cPilliat(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEXP lensI,SEXP lenLensI,SEXP KI,
     SEXP asI, SEXP nu_asI, SEXP len_asI, SEXP twolognI, SEXP tsI,SEXP debugI){
     // X : p \times n
     PROTECT(XI);
@@ -593,7 +594,7 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
 
 
 
-    cHDCD_call(X, -1, n-1, n, p, 1, changepoints,changepoint_counter_ptr,  depthcounter,
+    cPilliat_call(X, -1, n-1, n, p, 1, changepoints,changepoint_counter_ptr,  depthcounter,
                 thresholds , thresholds_test, cumsums, lens, lenLens,  as, nu_as, len_as,
                 segstarts, maxvalues, maxpos, maxas, K, cusum, vector, coordchg,maxval, 
                 startpoints, endpoints, maxaposes, tmpvec, twologn, ts,debug);
@@ -638,7 +639,7 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
 }
 
 
-
+/*
 SEXP cHDCD_single(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI,
     SEXP asI, SEXP nu_asI, SEXP len_asI, SEXP debugI){
     // X : p \times n
@@ -728,4 +729,4 @@ SEXP cHDCD_single(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI,
     return ret;
 
 
-}
+}*/

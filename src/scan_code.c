@@ -1,57 +1,6 @@
 #include "header.h"
 
-void internal_threshold_matrix(double * matrix, int r1, int c1, double a, double nu_a, int previously_tresholded,
-                                double prev_nu_a ){
-
-    // should be possible to optimize this code a bit
-    double a_sq = a*a;
-    double true_val = 0;
-    if (previously_tresholded)
-    {
-        for (int i = 0; i < r1; ++i)
-        {
-            for (int j = 0; j < c1; ++j)
-            {
-                if (fabs(matrix[cord_spec(i, j, r1)])>1e-10)
-                {
-                    true_val = matrix[cord_spec(i, j, r1)]+prev_nu_a;
-
-                    if (true_val>a_sq)
-                    {
-                        matrix[cord_spec(i, j, r1)] = true_val - nu_a;
-                    }
-                    else{
-                        matrix[cord_spec(i, j, r1)] = 0.0;
-                    }
-                }
-
-            }
-
-        }
-    }
-    else{
-        for (int i = 0; i < r1; ++i)
-        {
-            for (int j = 0; j < c1; ++j)
-            {
-                if (fabs(matrix[cord_spec(i, j, r1)])>a)
-                {
-                    matrix[cord_spec(i, j, r1)] = matrix[cord_spec(i, j, r1)]*matrix[cord_spec(i, j, r1)] - nu_a;
-
-                }
-                else{
-                    matrix[cord_spec(i, j, r1)] = 0.0;
-                }
-
-            }
-
-        }
-    }
-
-
-}
-
-void internal_colSum(double * matrix, int r1, int c1, double * vector){
+/*void internal_colSum(double * matrix, int r1, int c1, double * vector){
     //memset(vector, 0, c1);
     for (int j = 0; j < c1; ++j)
     {
@@ -62,177 +11,81 @@ void internal_colSum(double * matrix, int r1, int c1, double * vector){
         }
     }
 
+}*/
+
+void set_ind_vec(int * vector, int p){
+    for (int i = 0; i < p; ++i)
+    {
+        vector[i]=i;
+    }
 }
-void internal_check_segment(double * cumsums, double * cusum, int * maxpos, double * maximum, int * maxa_pos,
-                            int s, int e, int p, double * vector, double * thresholds, double * thresholds_test,
-                            double * as, double * nu_as, int len_as, double * tmpvec, int twologn, int * ts,int debug){
-    // require as[0] = 0
+void internal_scan_segment(double * cumsums, double * cusum, int * vector, double * vector2,int * maxpos, double * maximum, int * maxs,
+                            int s, int e, int p, double * Ts, int debug){
     if(debug){
       Rprintf("checking segment (%d,%d]\n", s,e);
 
     }
 
-    *maxpos  = s+(e-s)/2;
-    *maximum = NEGINF+1;
-    *maxa_pos = 0;
-    if(e-s<2){
-        return;
-    }
+    *maxpos = s+1;
+    *maximum = NEGINF;
+    *maxs = 1;
 
-    // compute CUSUM
-    CUSUM(cumsums, cusum, s, e, p); // dim is p \times (e-s-1)
 
-    //double prev_nu_a = as[0];
-    //double a;
-    //double nu_a;
+    CUSUM(cumsums, cusum, s, e, p);
+
+    double cumsumm = 0;
     double tmp = 0;
-    //double a_tmp=-100000;
-    //int pos_a_tmp = 0;
-    //double * val=0;
-    //int n = e-s;
 
-    //int detected = 0;
-    double tmp2 =0;
-    int localdetected = 0;
-    for (int j = 0; j < e-s-1; ++j){
-        memset(tmpvec, 0, sizeof(double)*len_as);
-        
-        // first aggregate thresholded CUSUMs
-        for (int i = 0; i < p; ++i){
-            tmp2 = cusum[cord_spec(i,j, p)]*cusum[cord_spec(i,j, p)];
-            for (int z = 0; z < len_as; ++z){
-                if (fabs(cusum[cord_spec(i,j, p)])>as[z])
-                {
-                    tmpvec[z] += tmp2 - nu_as[z];
-                }
-                else{
-                    break;
-                }
-                
-            }
-        }
-
-        // check if T >0
-        localdetected = 0;
-        for (int z = 0; z < len_as; ++z)
-        {
-            /*tmp = tmpvec[z] - thresholds[z];
-            if (tmp> *maximum)
-            {
-                *maximum= tmp;
-                *maxpos = s+j+1;
-                *maxa_pos = z;
-            }*/
-            tmp = tmpvec[z] - thresholds_test[z];
-            if(tmp>0 && ts[z] > twologn){
-                localdetected = 1;
-            }
-        }
-
-        // if T<= 0, check if P >0:
-        if(twologn>0 && localdetected ==0){
-            sort_k_largest(cusum + cord_spec(0,j,p) , twologn, 0, p);
-            double cumsum = 0;
-            int prev = 0;
-
-            for (int z = len_as-1; z >= 0; --z)
-            {
-                if(ts[z] > twologn){
-                    break;
-                }
-     
-                if(z==0){
-                    prev = -1;
-                }
-                for (int hh = prev+1; hh < ts[z]; ++hh)
-                {
-                    cumsum += cusum[cord_spec(hh,j,p)]*cusum[cord_spec(hh,j,p)];
-                }
-                prev = ts[z];
-                tmp = cumsum;
-
-                if(tmp>thresholds_test[z]){
-                    localdetected = 1;
-                }
-            }
-        }
-
-        if (localdetected)
-        {
-            for (int z = 0; z < len_as; ++z)
-            {
-                if(fabs(tmpvec[z])<1e-10){
-                    continue;
-                }
-                //tmp = tmpvec[z] - thresholds[z];
-                //if(tmpvec[z] > thresholds_test[z]){
-                    tmp = tmpvec[z] - thresholds[z];
-                    if (tmp> *maximum)
-                    {
-                        *maximum= tmp;
-                        *maxpos = s+j+1;
-                        *maxa_pos = z;
-                    }
-                //}
-                
-            }
-        }
-
-        
-        /*}else{
-            for (int z = 0; z < len_as; ++z)
-            {
-                if(fabs(tmpvec[z])<1e-10){
-                    continue;
-                }
-                //tmp = tmpvec[z] - thresholds[z];
-                if(tmpvec[z] > thresholds_test[z]){
-                    tmp = tmpvec[z] - thresholds[z];
-                    if (tmp> *maximum)
-                    {
-                        *maximum= tmp;
-                        *maxpos = s+j+1;
-                        *maxa_pos = z;
-                    }
-                }
-                
-            }
-        }*/
+    for (int j = 0; j < e-s-1; ++j)
+    {
+    	for (int i = 0; i < p; ++i)
+    	{
+    		cusum[cord_spec(i,j, p)] = cusum[cord_spec(i,j, p)]*cusum[cord_spec(i,j, p)];
+    	}
     }
 
-/*    for (int i = 0; i < len_as; ++i)
-    {
+    for (int j = 0; j < e-s-1; ++j){
+    	//R_rsort(&(cusum[cord_spec(0,j, p)]),p);
+        //
+        /*if(j<e-s-2){
+            set_ind_vec(vector,p);
+            memcpy(vector2, &(cusum[cord_spec(0,j+1, p)]), sizeof(double)*p );
+        }*/
+        R_qsort(&(cusum[cord_spec(0,j, p)]),1,p);
+        //R_qsort_I(&(cusum[cord_spec(0,j, p)]), vector,1,p);
+    	cumsumm = 0;
 
-        a = as[i];
-        nu_a = nu_as[i];
-        internal_threshold_matrix(cusum, p, e-s-1, a, nu_a, i>0, prev_nu_a );
-        internal_colSum(cusum, p, e-s-1, vector);
-        prev_nu_a = nu_a;
-        for (int j = 0; j < e-s-1; ++j)
-        {
-            //t = s+i+1;
-            tmp = vector[j] -thresholds[i];
-            if(tmp> *maximum){
-                *maximum = tmp;
-                *maxpos = s+j+1;
-                *maxa_pos = i;
-            }
-            if(tmp>a_tmp){
-                a_tmp = tmp;
-                pos_a_tmp = s+j+1;
+        /*if(j<e-s-2){
+            for (int i = 0; i < p; ++i)
+            {
+                cumsumm +=cusum[cord_spec((p-1)-i,j, p)];
+                tmp = (cumsumm - (i+1))/sqrt(2*(i+1))-Ts[i];
+                if(tmp>*maximum){
+                    *maximum = tmp;
+                    *maxpos = s+j+1;
+                    *maxs = i+1;
+                }
+                cusum[cord_spec(i,j+1, p)] = vector2[vector[i]];
 
             }
         }
+        else{*/
+        	for (int i = 0; i < p; ++i)
+        	{
+        		cumsumm +=cusum[cord_spec((p-1)-i,j, p)];
+        		tmp = (cumsumm - (i+1))/sqrt(2*(i+1))-Ts[i];
+        		if(tmp>*maximum){
+        			*maximum = tmp;
+        			*maxpos = s+j+1;
+        			*maxs = i+1;
+        		}
+        	}
 
-        if (debug)
-        {
+        //}
 
-            Rprintf("for a=%f, max is %f (%f, thresh = %f) at pos %d\n", a, a_tmp, a_tmp*thresholds[i],thresholds[i], pos_a_tmp);
-        }
-        a_tmp = -100000;
+    }
 
 
-    }*/
 
     if(debug){
       Rprintf("for segment (%d,%d] we found maximum in %d with val %f\n", s,e,*maxpos, *maximum);
@@ -242,13 +95,13 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
 }
 
 
-void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepoints,int* changepoint_counter_ptr, int * depthcounter,
-                double * thresholds, double * thresholds_test, double *cumsums, int* lens, int lenLens, double * as, double * nu_as, int len_as,
-                int * segstarts, double * maxvalues, int* maxpos,int * maxas, int K, double * cusum,
-                double * vector, int * coordchg, double * maxval, int * startpoints, int* endpoints, int* maxaposes,
-                double * tmpvec, int twologn, int * ts,int debug){
+void cScan_call(double * x, int s, int e, int n, int p, int depth, int* changepoints,int* changepoint_counter_ptr, int * depthcounter,
+                double * Ts, double *cumsums, int* lens, int lenLens,
+                int * segstarts, double * maxvalues, int* maxpos,int * maxss_all, int K, double * cusum, int* vector, double * vector2,
+                int * coordchg, double * maxval, int * startpoints, int* endpoints, int* maxss,
+                int debug){
     if(debug){
-        Rprintf("cHDCD_call! s=%d, e=%d\n", s, e);
+        Rprintf("cScan_call! s=%d, e=%d\n", s, e);
     }
 
     if(e-s<lens[0]){
@@ -257,7 +110,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
     }
     int argmax = s+1;
     double maximum = NEGINF;
-    int maxa_pos = 0;
+    int maxs = 0;
 
     //int tmpargmax;
     //double tmpmaximum;
@@ -316,13 +169,15 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
                 //inspectOnSegment(cumsums, cusum, &tmpargmax, &tmpmaximum, s, e, p, lambda,
                  //   eps, maxiter, projvec, cusum_proj);
                  //double * cumsums, double * cusum, int * maxpos, double * maximum,
-                 internal_check_segment(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxvalues[cord_spec(k,j,n)]), &(maxas[cord_spec(k,j,n)]),
-                            i, i+len, p, vector, thresholds, thresholds_test, as, nu_as,len_as, tmpvec, twologn, ts,debug);
+                 //internal_check_segment(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxvalues[cord_spec(k,j,n)]), &(maxss_all[cord_spec(k,j,n)]),
+                  //          i, i+len, p, vector, Ts, as, nu_as,len_as, tmpvec, debug);
+                 internal_scan_segment(cumsums, cusum, vector, vector2, &(maxpos[cord_spec(k,j,n)]), &(maxvalues[cord_spec(k,j,n)]), &(maxss_all[cord_spec(k,j,n)]),
+                            i, i+len, p, Ts,  debug);
                  //internal_inspectOnSegment(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxvalues[cord_spec(k,j,n)]), i, i+len, p,
                  //lambda,
                 //      eps, maxiter, mhat, mhatprod, v, v2,debug);
             }
-            else if(maxvalues[cord_spec(k,j,n)] > NEGINF+1){
+            else{
               if(debug){
                 Rprintf("segment (%d,%d] (k=%d, j=%d) already inspected, with max val %f in %d\n", i, i+len,k,j,
                 maxvalues[cord_spec(k,j,n)],maxpos[cord_spec(k,j,n)]);
@@ -333,7 +188,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
             if(tmp>maximum){
                 maximum = tmp;
                 argmax = maxpos[cord_spec(k,j,n)];
-                maxa_pos = maxas[cord_spec(k,j,n)];
+                maxs = maxss_all[cord_spec(k,j,n)];
                 j_max = j;
                 k_max=k;
                 //found=1;
@@ -342,18 +197,15 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
 
         }
 
-        if(maximum>NEGINF+1){
+        if(maximum>0.0){
             break;
         }
-/*        if(maximum>0.0){
-            break;
-        }
-*/    }
+    }
     if(debug){
         Rprintf("maximum=%f\n", maximum);
     }
 
-    if(maximum >NEGINF+1){
+    if(maximum > 0.0){
         if(debug){
           Rprintf("!!!!!! declared change-point in %d. val = %f. (s,e] = (%d,%d]\n", argmax, maximum,
           segstarts[cord_spec(k_max,j_max,n)], lens[j_max]+ segstarts[cord_spec(k_max,j_max,n)]);
@@ -366,7 +218,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
         //len = lens[j_max];
         //int ss = i;
         //int ee = i+len;
-        if(maxa_pos==0){
+        if(maxs==p){
             for (int zz = 0; zz < p; ++zz)
             {
                 coordchg[cord_spec(zz,*changepoint_counter_ptr, p)]=1;
@@ -378,16 +230,24 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
             int ss = i;
             int ee = i+len;
             CUSUM(cumsums, cusum, ss, ee, p);
-            internal_threshold_matrix(&(cusum[cord_spec(0,argmax-ss-1,p)]), p, 1, as[maxa_pos],  nu_as[maxa_pos], 0,
-                                    0 );
-
-
+            int jj = argmax-ss-1;
             for (int zz = 0; zz < p; ++zz)
             {
-                if(cusum[cord_spec(0,argmax-ss-1,p)+zz]>1e-10){
-                    coordchg[cord_spec(zz,*changepoint_counter_ptr, p)]=1;
-                }
+            	vector[zz] = zz;
             }
+
+            //R_rsort(&(cusum[cord_spec(0,jj, p)]),p);
+            rsort_with_index (&(cusum[cord_spec(0,jj, p)]), vector, p);
+
+            int coord = 0;
+            for (int zz = 0; zz < maxs; ++zz)
+            {
+            	//coord = vector[p-zz-1];
+                coord = vector[zz];
+            	coordchg[cord_spec(coord,*changepoint_counter_ptr, p)]=1;
+
+            }
+            
 
         }
 
@@ -396,60 +256,47 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
         maxval[*changepoint_counter_ptr] = maximum;
         startpoints[*changepoint_counter_ptr] = segstarts[cord_spec(k_max,j_max,n)];
         endpoints[*changepoint_counter_ptr] = segstarts[cord_spec(k_max,j_max,n)] + lens[j_max];
-        maxaposes[*changepoint_counter_ptr] = maxa_pos;
+        maxss[*changepoint_counter_ptr] = maxs;
         (*changepoint_counter_ptr)++;
         if(*changepoint_counter_ptr >n){
           return;
         }
-        //cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepoints,int* changepoint_counter_ptr, int * depthcounter,
+        //cScan_call(double * x, int s, int e, int n, int p, int depth, int* changepoints,int* changepoint_counter_ptr, int * depthcounter,
         //        double threshold_d, double threshold_s , double *cumsums, int* lens, int lenLens, double * as, double * nu_as, int len_as,
         //        int * segstarts, double * maxvalues, int* maxpos, int K, double * cusum, double * matrix,
         //        double * vector, int * coordchg, int debug)
-        cHDCD_call(x, s, argmax, n, p, depth+1, changepoints,changepoint_counter_ptr,  depthcounter,
-                thresholds, thresholds_test, cumsums, lens, lenLens,  as, nu_as, len_as,
-                segstarts, maxvalues, maxpos,maxas, K, cusum, vector, coordchg, maxval, 
-                startpoints, endpoints, maxaposes, tmpvec,twologn, ts,debug);
-        cHDCD_call(x, argmax, e,n, p, depth+1, changepoints,changepoint_counter_ptr,  depthcounter,
-                thresholds , thresholds_test, cumsums, lens, lenLens,  as, nu_as, len_as,
-                segstarts, maxvalues, maxpos,maxas, K, cusum, vector, coordchg, maxval,
-                startpoints, endpoints, maxaposes, tmpvec, twologn, ts,debug);
+        cScan_call(x, s, argmax, n, p, depth+1, changepoints,changepoint_counter_ptr,  depthcounter,
+                Ts , cumsums, lens, lenLens,  
+                segstarts, maxvalues, maxpos,maxss_all, K, cusum, vector, vector2, coordchg, maxval, 
+                startpoints, endpoints, maxss,debug);
+        cScan_call(x, argmax, e,n, p, depth+1, changepoints,changepoint_counter_ptr,  depthcounter,
+                Ts, cumsums, lens, lenLens,
+                segstarts, maxvalues, maxpos,maxss_all, K, cusum, vector, vector2, coordchg, maxval,
+                startpoints, endpoints, maxss, debug);
 
     }
 
     return;
 }
 
-SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEXP lensI,SEXP lenLensI,SEXP KI,
-    SEXP asI, SEXP nu_asI, SEXP len_asI, SEXP twolognI, SEXP tsI,SEXP debugI){
+SEXP cScan(SEXP XI,SEXP nI, SEXP pI,SEXP TsI, SEXP lensI,SEXP lenLensI,SEXP KI, SEXP debugI){
     // X : p \times n
     PROTECT(XI);
-    PROTECT(thresholdsI);
-    PROTECT(thresholds_testI);
-    PROTECT(lensI);
-    PROTECT(asI);
-    PROTECT(nu_asI);
     PROTECT(nI);
     PROTECT(pI);
+    PROTECT(TsI);
+    PROTECT(lensI);
     PROTECT(lenLensI);
     PROTECT(KI);
-    PROTECT(len_asI);
-    PROTECT(twolognI);
-    PROTECT(tsI);
     PROTECT(debugI);
 
     double * X = REAL(XI);
     int n = *(INTEGER(nI));
     int p = *(INTEGER(pI));
-    double *thresholds = (REAL(thresholdsI));
-    double *thresholds_test = (REAL(thresholds_testI));
+    double *Ts = (REAL(TsI));
     int *lens = INTEGER(lensI); /////// dobbeltsjekk at int er like stor som INTEGER!!!!!!!
     int lenLens = *(INTEGER(lenLensI));
     int K = *(INTEGER(KI));
-    double * as = REAL(asI);
-    double * nu_as = REAL(nu_asI);
-    int len_as = *(INTEGER(len_asI));
-    int twologn = * (INTEGER(twolognI));
-    int * ts = INTEGER(tsI);
     int debug = *INTEGER(debugI);
 
     if(debug){
@@ -473,9 +320,9 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
     SEXP endpointsSEXP = PROTECT(allocVector(INTSXP, n));
     int * endpoints = INTEGER(endpointsSEXP); //pointer to array
     memset(endpoints, 0, sizeof(int)*n);
-    SEXP maxaposesSEXP = PROTECT(allocVector(INTSXP, n));
-    int * maxaposes = INTEGER(maxaposesSEXP); //pointer to array
-    memset(maxaposes, 0, sizeof(int)*n);
+    SEXP maxssSEXP = PROTECT(allocVector(INTSXP, n));
+    int * maxss = INTEGER(maxssSEXP); //pointer to array
+    memset(maxss, 0, sizeof(int)*n);
     SEXP depthcounterSEXP= PROTECT(allocVector(INTSXP, n));
     int * depthcounter = INTEGER(depthcounterSEXP); //pointer to array
     memset(depthcounter, 0, sizeof(int)*n);
@@ -507,11 +354,14 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
         maxlen = n;
         minlen = p;
     }
-    SEXP vectorSEXP = PROTECT(allocVector(REALSXP, maxlen));
 
+    SEXP vectorSEXP = PROTECT(allocVector(INTSXP, p));
+    int * vector = INTEGER(vectorSEXP);
+    memset(vector, 0, sizeof(int)*p);
 
-    double * vector = REAL(vectorSEXP);
-    memset(vector, 0, sizeof(double)*maxlen);
+    SEXP vector2SEXP = PROTECT(allocVector(REALSXP, p));
+    double * vector2 = REAL(vector2SEXP);
+    memset(vector2, 0, sizeof(double)*p);
 
 
 
@@ -523,20 +373,16 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
 
     SEXP maxvaluesSEXP = PROTECT(allocVector(REALSXP, n*lenLens));
     double * maxvalues = REAL(maxvaluesSEXP);
-    //memset(maxvalues, 0, sizeof(double)*n*lenLens);
     for (int i = 0; i < n*lenLens; ++i)
     {
         maxvalues[i] = NEGINF;
     }
-    SEXP tmpvecSEXP = PROTECT(allocVector(REALSXP, len_as));
-    double * tmpvec = REAL(tmpvecSEXP);
-    memset(tmpvec, 0, sizeof(double)*len_as);
     SEXP maxposSEXP = PROTECT(allocVector(INTSXP, n*lenLens));
     int * maxpos = INTEGER(maxposSEXP);
     memset(maxpos, 0, sizeof(int)*n*lenLens);
-    SEXP maxasSEXP = PROTECT(allocVector(INTSXP, n*lenLens));
-    int * maxas = INTEGER(maxasSEXP);
-    memset(maxas, 0, sizeof(int)*n*lenLens);
+    SEXP maxss_allSEXP = PROTECT(allocVector(INTSXP, n*lenLens));
+    int * maxss_all = INTEGER(maxss_allSEXP);
+    memset(maxss_all, 0, sizeof(int)*n*lenLens);
     SEXP segstartsSEXP = PROTECT(allocVector(INTSXP, n*lenLens));
     int * segstarts = INTEGER(segstartsSEXP);
     //memset(segstarts, -2, sizeof(int)*n*lenLens);
@@ -593,10 +439,10 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
 
 
 
-    cHDCD_call(X, -1, n-1, n, p, 1, changepoints,changepoint_counter_ptr,  depthcounter,
-                thresholds , thresholds_test, cumsums, lens, lenLens,  as, nu_as, len_as,
-                segstarts, maxvalues, maxpos, maxas, K, cusum, vector, coordchg,maxval, 
-                startpoints, endpoints, maxaposes, tmpvec, twologn, ts,debug);
+    cScan_call(X, -1, n-1, n, p, 1, changepoints,changepoint_counter_ptr,  depthcounter,
+                Ts , cumsums, lens, lenLens,
+                segstarts, maxvalues, maxpos, maxss_all, K, cusum, vector, vector2, coordchg,maxval, 
+                startpoints, endpoints, maxss,  debug);
 
 /*    cInspect_call(X, -1, n-1, n, p, 1, changepoints, changepoint_counter_ptr, depthcounter,
                 maxval, xi, cumsums, lens, lenLens, lambda,
@@ -616,7 +462,7 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
     SET_VECTOR_ELT(ret, 3, coordschgSEXP);
     SET_VECTOR_ELT(ret, 4, startpointsSEXP);
     SET_VECTOR_ELT(ret, 5, endpointsSEXP);
-    SET_VECTOR_ELT(ret, 6, maxaposesSEXP);
+    SET_VECTOR_ELT(ret, 6, maxssSEXP);
     SET_VECTOR_ELT(ret, 7, changepointnumSEXP);
 
     // creating list of names/titles to be returned in the output list
@@ -628,50 +474,45 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
     SET_STRING_ELT(names, 3, mkChar("coordinate"));
     SET_STRING_ELT(names, 4, mkChar("startpoints"));
     SET_STRING_ELT(names, 5, mkChar("endpoints"));
-    SET_STRING_ELT(names, 6, mkChar("maxaposes"));
+    SET_STRING_ELT(names, 6, mkChar("maxss"));
     SET_STRING_ELT(names, 7, mkChar("changepointnumber"));
 
     setAttrib(ret, R_NamesSymbol, names);
 
-    UNPROTECT(32);
+    UNPROTECT(26);
     return ret;
 }
 
 
 
-SEXP cHDCD_single(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI,
-    SEXP asI, SEXP nu_asI, SEXP len_asI, SEXP debugI){
+
+
+SEXP cScan_single(SEXP XI,SEXP nI, SEXP pI, SEXP debugI, SEXP TsI){
     // X : p \times n
     PROTECT(XI);
-    PROTECT(thresholdsI);
-    
-    PROTECT(asI);
-    PROTECT(nu_asI);
     PROTECT(nI);
     PROTECT(pI);
-    PROTECT(len_asI);
     PROTECT(debugI);
+    PROTECT(TsI);
+
 
     double * X = REAL(XI);
+    double * Ts = REAL(TsI);
     int n = *(INTEGER(nI));
     int p = *(INTEGER(pI));
-    double *thresholds = (REAL(thresholdsI));
     
-    double * as = REAL(asI);
-    double * nu_as = REAL(nu_asI);
-    int len_as = *(INTEGER(len_asI));
     int debug = *INTEGER(debugI);
 
-    UNPROTECT(3); // unprotecting all except the arrays
+
     if(debug){
       Rprintf("p = %d\n", p);
       Rprintf("n = %d\n", n);
     }
 
 
-    SEXP tmpvecSEXP = PROTECT(allocVector(REALSXP, len_as));
+    /*SEXP tmpvecSEXP = PROTECT(allocVector(REALSXP, len_as));
     double * tmpvec = REAL(tmpvecSEXP);
-    memset(tmpvec, 0, sizeof(double)*len_as);
+    memset(tmpvec, 0, sizeof(double)*len_as);*/
 
     SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
     double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
@@ -698,33 +539,67 @@ SEXP cHDCD_single(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI,
 
 
     SEXP maxposSEXP = PROTECT(allocVector(INTSXP, 1));
-    SEXP maxaposSEXP = PROTECT(allocVector(INTSXP, 1));
+    SEXP maxsSEXP = PROTECT(allocVector(INTSXP, 1));
     int * maxpos = INTEGER(maxposSEXP);
-    int * maxapos = INTEGER(maxaposSEXP);
+    int * maxs= INTEGER(maxsSEXP);
+
     *maxpos = -10;
     double maximum = -1000000000000000000000.0;
-    *maxapos = 0;
+    *maxs = 0;
     int s = -1;
     int e = n-1;
-    internal_check_segment( cumsums, cusum, maxpos,  &maximum, maxapos,
-                             s, e, p, NULL, thresholds, thresholds,
-                            as, nu_as, len_as,  tmpvec,0, NULL,debug);
+
+    CUSUM(cumsums, cusum, s, e, p);
+
+    double cumsumm = 0;
+    double tmp = 0;
+
+    for (int j = 0; j < e-s-1; ++j)
+    {
+    	for (int i = 0; i < p; ++i)
+    	{
+    		cusum[cord_spec(i,j, p)] = cusum[cord_spec(i,j, p)]*cusum[cord_spec(i,j, p)];
+    	}
+    }
+
+    for (int j = 0; j < e-s-1; ++j){
+    	R_rsort(&(cusum[cord_spec(0,j, p)]),p);
+    	cumsumm = 0;
+    	for (int i = 0; i < p; ++i)
+    	{
+    		/*if (i>0)
+    		{
+    			if(cusum[cord_spec(i-1,j, p)]>cusum[cord_spec(i,j, p)]){
+    				Rprintf("ERROR");
+    			}
+    		}*/
+    		cumsumm +=cusum[cord_spec((p-1)-i,j, p)];
+    		tmp = (cumsumm - (i+1))/sqrt(2*(i+1))-Ts[i];
+    		if(tmp>maximum){
+    			maximum = tmp;
+    			*maxpos = j;
+    			*maxs = i+1;
+    		}
+    	}
+
+    }
+
 
 
     SEXP ret = PROTECT(allocVector(VECSXP, 2)); //the list to be returned in R
     SET_VECTOR_ELT(ret, 0, maxposSEXP);
-    SET_VECTOR_ELT(ret, 1, maxaposSEXP);
+    SET_VECTOR_ELT(ret, 1, maxsSEXP);
 
     // creating list of names/titles to be returned in the output list
     SEXP names = PROTECT(allocVector(STRSXP, 2));
     //SET_STRING_ELT(names, 0, mkChar("CUSUM"));
     SET_STRING_ELT(names, 0, mkChar("pos"));
-    SET_STRING_ELT(names, 1, mkChar("apos"));
+    SET_STRING_ELT(names, 1, mkChar("s"));
 
 
     setAttrib(ret, R_NamesSymbol, names);
 
-    UNPROTECT(12);
+    UNPROTECT(11);
     return ret;
 
 

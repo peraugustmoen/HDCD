@@ -1,6 +1,7 @@
 #' @useDynLib HDCD cHDCD
 #' @export
-HDCD = function(X, threshold_d, threshold_s, alpha = 1+1/6, K = 7, debug =FALSE){
+HDCD = function(X, threshold_d, threshold_s, alpha = 1+1/6, K = 7, debug =FALSE,
+                threshold_d_test = threshold_d, threshold_s_test = threshold_s, droppartialsum = FALSE){
   p = dim(X)[1]
   n = dim(X)[2]
 
@@ -18,7 +19,7 @@ HDCD = function(X, threshold_d, threshold_s, alpha = 1+1/6, K = 7, debug =FALSE)
     lens= c(lens, last)
   }
   
-  max_s = sqrt(4*p*log(n))
+  max_s = min(sqrt(4*p*log(n)), p)
   log2ss = 0:floor(log(max_s, base=2))
   ss = 2^(log2ss)
   ss = c(p, rev(ss))
@@ -27,23 +28,39 @@ HDCD = function(X, threshold_d, threshold_s, alpha = 1+1/6, K = 7, debug =FALSE)
   as[1] = 0
   nu_as = 1 + as*exp(dnorm(as, log=TRUE)-pnorm(as, lower.tail = FALSE, log=TRUE))
   thresholds = nu_as[]
+  thresholds_test = nu_as[]
   
-  #thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)*p*log(n^4)/ss[2:length(ss)]^2), log(n^4))
-  thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)-1 + sqrt(p*log(n^4))/ss[2:length(ss)]), log(n^4))
+  thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)*p*log(n^4)/ss[2:length(ss)]^2), log(n^4))
+  thresholds_test[2:length(ss)] = threshold_s_test/threshold_s * thresholds[2:length(ss)]
+  #thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)-1 + sqrt(p*log(n^4))/ss[2:length(ss)]), log(n^4))
+  #thresholds[2:length(ss)] = threshold_s*(ss[2:length(ss)]*log(exp(1)-1 + sqrt(p*log(n^4))/ss[2:length(ss)])+ log(n^4))
   
   #thresholds[2:length(ss)] = threshold_s*(sqrt(p*exp(-as[2:length(ss)]^2/2)*log(n^4))+ log(n^4))
   
   
   #thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)*p*log(n*log(sqrt(p*log(n)),2))/ss[2:length(ss)]^2), log(n*log(sqrt(p*log(n)),2)))
-  thresholds[1] = threshold_d * sqrt(p*log(n^4))
+  thresholds[1] = threshold_d * (sqrt(p*log(n^4)) + log(n^4))
+  thresholds_test[1] = threshold_d_test/threshold_d * thresholds[1]
   
+  ind = thresholds > thresholds[1]
+  thresholds = thresholds[!ind]
+  thresholds_test = thresholds_test[!ind]
+  as = as[!ind]
+  nu_as = nu_as[!ind]
+  #thresholds_test = threshold_test_const* thresholds
+  ts = ss[!ind]
+  twologn = min(p, floor(2*log(n)))
+  if(droppartialsum){
+    twologn=0
+  }
+  #print(twologn)
   #lens[7]=round(log(n)^2)
   #myInspect(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdI, SEXP adaptTreshI, SEXP lensI,SEXP lenLensI,SEXP KI,
   # SEXP epsI, SEXP lambdaI, SEXP maxiterI)
 
-  res = .Call(cHDCD, X,as.integer(n), as.integer(p), thresholds,
+  res = .Call(cHDCD, X,as.integer(n), as.integer(p), thresholds,thresholds_test,
               as.integer(lens),as.integer(length(lens)), as.integer(K), as,nu_as, 
-              as.integer(length(as)), as.integer(debug))
+              as.integer(length(as)), as.integer(twologn), as.integer(ts),as.integer(debug))
   
   
   if(res$changepointnum==0){
@@ -60,12 +77,13 @@ HDCD = function(X, threshold_d, threshold_s, alpha = 1+1/6, K = 7, debug =FALSE)
   res$changepoints = as.integer(res$changepoints[srt_indices])
   res$CUSUMval = res$CUSUMval[srt_indices]
   res$depth = as.integer(res$depth[srt_indices])
-  res$coordinate = as.integer(res$coordinate[,srt_indices])
+  res$coordinate = (res$coordinate[,srt_indices])
   res$startpoints = as.integer(res$startpoints[srt_indices])
   res$endpoints = as.integer(res$endpoints[srt_indices])
   res$maxaposes = as.integer(res$maxaposes[srt_indices])
   res$s = as.integer(ss[res$maxaposes+1])
   res$thresholds = thresholds
+  res$ts = ts
   
 
   return(res)

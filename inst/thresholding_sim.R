@@ -2,16 +2,16 @@ library(HDCD)
 
 #multiple change-points:
 #multiple change-points:
-p = 3000
-n = 100
+p = 1000
+n = 1000
 noise = matrix(rnorm(n*p), nrow=p, ncol=n)
 mus = matrix(0, nrow=p, ncol=n)
-set.seed(10)
+#set.seed(10)
 etas = c(round(n/2))
 randomdense =rnorm(p)
 randomdense = randomdense/norm(randomdense,type="2")*sqrt(p)
 randomdense = randomdense/p^(1/4)/sqrt(n)*12
-k = 1
+k = 5
 #randomsparse = rnorm(k)
 #randomsparse = randomsparse/norm(randomsparse, type="2")
 # randomsparse = runif(k, min=-1, max = 1)
@@ -19,13 +19,13 @@ k = 1
 # randomsparse = randomsparse* 3/sqrt(n)*1000/k
 
 #randomsparse = 2.5*c(2/sqrt(n)*1/sqrt(k)*max(c(sqrt(k*log(exp(1)*p*log(n^4)/k^2)), log(n^4)))*rnorm(k), rep(0,p-k))
-randomsparse = c(2/sqrt(n)*1/sqrt(k)*max(c(sqrt(k*log(exp(1)*p*log(n^4)/k^2)), log(n^4)))*sample(c(-1,1), replace=TRUE,k), rep(0,p-k))
+randomsparse = c(15/sqrt(n)*1/sqrt(k)*max(c(sqrt(k*log(exp(1)*p*log(n^4)/k^2)), log(n^4)))*sample(c(-1,1), replace=TRUE,k), rep(0,p-k))
 
 #kk = round(p^(3/4))
-#kk = p
-#randomsparse = c(100*rep(1,kk)/sqrt(kk)*p^(1/4), rep(0, p-kk))
+kk = p
+randomsparse = c(rep(1,kk)/sqrt(kk)*(p*log(n))^(1/4), rep(0, p-kk))/sqrt(2)
 
-mus[,round(etas[1]+1):n] = mus[,round(etas[1]+1):n] + matrix(rep(randomsparse, n-round(etas[1])) ,nrow=p)
+#mus[,round(etas[1]+1):n] = mus[,round(etas[1]+1):n] + matrix(rep(randomsparse, n-round(etas[1])) ,nrow=p)
 
 #mus[,round(etas[1]+1):n] = mus[,round(etas[1]+1):n] + matrix(rep(c(randomsparse, rep(0,p-k)), n-round(etas[1])) ,nrow=p)
 #mus[,round(etas[2]+1):n] = mus[,round(etas[2]+1):n] + matrix(rep(randomdense, n-round(etas[2])) ,nrow=p)/0.5
@@ -48,7 +48,8 @@ CUSUM_signal = matrix(data=CUSUM_signal, nrow=p,ncol = stop-start-1)
 
 max(colSums(CUSUM_signal^2))
 #tresholded = CUSUM_X[, ]^2
-thresholded = CUSUM_X[,]
+CUSUM_X = as.matrix(CUSUM_X, ncol=n-1, nrow= p)
+thresholded = matrix(NA, nrow = p, ncol = n-1)
 # see what s gets highest score
 scores = rep(NA, floor(sqrt(p*log(n^4)))+1)
 scores2 = rep(NA, floor(sqrt(p*log(n^4)))+1)
@@ -92,7 +93,7 @@ for (s in 1:(floor(sqrt(p*log(n^4)))+1)) {
   thresh2 = thresh
   if(s != last){
     thresh = 9*((sqrt(p*exp(-a^2/2)*log(n^4))+ log(n^4)))
-    thresh2 =9*(pmax(s*log(exp(1)*p*log(n^4)/s^2)+log(n^4)))
+    thresh2 =9*((s*log(exp(1)*p*log(n^4)/s^2)+log(n^4)))
   }
   threshes[s] = thresh
   threshes2[s] = thresh2
@@ -129,6 +130,7 @@ for (s in 1:(floor(sqrt(p*log(n^4)))+1)) {
   as2[s] = a
   
 }
+plot(maxes)
 # par(mfrow=c(1,2))
 # plot(scores)
 # abline(v = k, col=2)
@@ -138,8 +140,31 @@ par(mfrow=c(1,2))
 #plot(maxes - threshes)
 #abline(v = k, col=2)
 
+diffasq = as[1:(length(as)-1)]^2 - as[2:length(as)]^2
+plot(diff(maxes2))
+lines(ss*2*diffasq,col=2)
+min(which(ss*2*diffasq > diff(maxes2)))
+max(which(ss*2*diffasq > diff(maxes2)))
+
+
 plot(maxes2-threshes2)
 abline(v = k, col=2)
+plot(maxes2 - threshes2/9/9)
+
+threshes3= nu_as[]
+
+threshes3[1:(length(ss))] = 1*(ss[1:(length(ss))]*pmax(log(exp(1)-1 + sqrt(p*log(n^4))/ss[1:(length(ss))]), log(n^4)))
+
+
+
+threshes3[length(nu_as)] =1* (sqrt(p*log(n^4)) + log(n^4))
+
+plot(maxes2 - 18*threshes3)
+abline(v = k, col=2)
+maxs = which.max(maxes2 - 18*threshes3)
+max(CUSUM_signal^2)
+as2[maxs]^2
+as2[round(maxs/2)]^2
 
 maxes22 = maxes2[]
 maxes22[maxes22/num_inc - 2*as2^2<0] = 0

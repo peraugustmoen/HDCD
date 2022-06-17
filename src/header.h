@@ -11,6 +11,9 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <float.h>
+
+#define NEGINF -(FLT_MAX -10.0)
 
 void internal_matmult(double *,
                       double *,
@@ -30,3 +33,7 @@ double * internal_power_method(double *, int, double,
   
 
 void CUSUM(double *,double * , int , int , int );
+
+// Sorting
+void insertSort (double * , int , int );
+void sort_k_largest(double *, int, int, int);

@@ -357,7 +357,6 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
     double lambda = *REAL(lambdaI);
     int maxiter = *INTEGER(maxiterI);
     int debug = *INTEGER(debugI);
-    UNPROTECT(10); // unprotecting all except X and lens
     if(debug){
       Rprintf("p = %d\n", p);
       Rprintf("lambda = %f\n", lambda);
@@ -467,23 +466,125 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
                 mhatprod, v, v2,debug,coordchg);
 
     // return:
-    SEXP ret = PROTECT(allocVector(VECSXP, 4)); //the list to be returned in R
+    SEXP changepointnumSEXP = PROTECT(allocVector(INTSXP, 1));
+    int * changepointnum = INTEGER(changepointnumSEXP);
+    *changepointnum = changepoint_counter;
+
+    SEXP ret = PROTECT(allocVector(VECSXP, 5)); //the list to be returned in R
     SET_VECTOR_ELT(ret, 0, out);
     SET_VECTOR_ELT(ret, 1, maxvalSEXP);
     SET_VECTOR_ELT(ret, 2, depthcounterSEXP);
     SET_VECTOR_ELT(ret, 3, coordschgSEXP);
+    SET_VECTOR_ELT(ret, 4, changepointnumSEXP);
 
     // creating list of names/titles to be returned in the output list
-    SEXP names = PROTECT(allocVector(STRSXP, 4));
+    SEXP names = PROTECT(allocVector(STRSXP, 5));
     //SET_STRING_ELT(names, 0, mkChar("CUSUM"));
     SET_STRING_ELT(names, 0, mkChar("changepoints"));
     SET_STRING_ELT(names, 1, mkChar("CUSUMval"));
     SET_STRING_ELT(names, 2, mkChar("depth"));
     SET_STRING_ELT(names, 3, mkChar("coordinate"));
+    SET_STRING_ELT(names, 4, mkChar("changepointnumber"));
 
     setAttrib(ret, R_NamesSymbol, names);
 
-    UNPROTECT(16);
+    UNPROTECT(27);
+    return ret;
+}
+
+
+SEXP cInspect_single(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, 
+    SEXP epsI, SEXP lambdaI, SEXP maxiterI, SEXP debugI){
+    // X : p \times n
+    PROTECT(XI);
+    PROTECT(nI);
+    PROTECT(pI);
+    PROTECT(xiI);
+   
+    PROTECT(epsI);
+    PROTECT(lambdaI);
+    PROTECT(maxiterI);
+    PROTECT(debugI);
+
+    double * X = REAL(XI);
+    int n = *(INTEGER(nI));
+    int p = *(INTEGER(pI));
+    double xi = *(REAL(xiI));
+    double eps = *REAL(epsI);
+    double lambda = *REAL(lambdaI);
+    int maxiter = *INTEGER(maxiterI);
+    int debug = *INTEGER(debugI);
+    UNPROTECT(7); // unprotecting all except X and lens
+    if(debug){
+      Rprintf("p = %d\n", p);
+      Rprintf("lambda = %f\n", lambda);
+    }
+
+
+    SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
+    double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
+    memset(cumsums, 0, p*(n+1)*sizeof(double));
+
+    for (int j = 1; j <=n; ++j)
+    {
+        for (int i = 0; i < p; ++i)
+        {
+            //#define cord_spec(r,c, D) ((r) + (D)*(c))
+            cumsums[cord_spec(i,j,p)] = X[cord_spec(i,j-1, p)] +cumsums[cord_spec(i,j-1, p)];
+        }
+    }
+
+    SEXP cusumSEXP = PROTECT(allocVector(REALSXP, p*(n)));
+    double * cusum = REAL(cusumSEXP);
+    memset(cusum, 0, sizeof(double)*p*(n));
+    int maxlen = p;
+    int minlen = n;
+    if(n>p){
+        maxlen = n;
+        minlen = p;
+    }
+    SEXP vSEXP = PROTECT(allocVector(REALSXP, maxlen));
+    SEXP v2SEXP = PROTECT(allocVector(REALSXP, maxlen));
+    SEXP mhatSEXP = PROTECT(allocVector(REALSXP, p*n));
+    SEXP mhatprodSEXP = PROTECT(allocVector(REALSXP, minlen*minlen));
+
+    double * v = REAL(vSEXP);
+    memset(v, 0, sizeof(double)*maxlen);
+    double * v2 = REAL(v2SEXP);
+    memset(v2, 0, sizeof(double)*maxlen);
+    double * mhat = REAL(mhatSEXP);
+    memset(mhat, 0, sizeof(double)*p*n);
+    double * mhatprod = REAL(mhatprodSEXP);
+    memset(mhatprod, 0, sizeof(double)*minlen*minlen);
+
+
+
+    // record all segment starts
+    // we don't compute all cusums here but do it on the fly so we dont have to do anything
+    // unecessary
+
+    SEXP maxposSEXP = PROTECT(allocVector(INTSXP, 1));
+    int * maxpos = INTEGER(maxposSEXP);
+    *maxpos = 0;
+    double maximum = -1000000000000000000000.0;
+    int s = -1;
+    int e = n-1;
+
+    internal_inspectOnSegment(cumsums, cusum, maxpos, &maximum, s, e, p,
+                 lambda,eps, maxiter, mhat, mhatprod, v, v2,debug);
+
+    SEXP ret = PROTECT(allocVector(VECSXP, 1)); //the list to be returned in R
+    SET_VECTOR_ELT(ret, 0, maxposSEXP);
+
+    // creating list of names/titles to be returned in the output list
+    SEXP names = PROTECT(allocVector(STRSXP, 1));
+    //SET_STRING_ELT(names, 0, mkChar("CUSUM"));
+    SET_STRING_ELT(names, 0, mkChar("pos"));
+
+
+    setAttrib(ret, R_NamesSymbol, names);
+
+    UNPROTECT(10);
     return ret;
 }
 
