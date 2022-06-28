@@ -33,7 +33,30 @@ double * internal_power_method(double *, int, double,
   
 
 void CUSUM(double *,double * , int , int , int );
+void singleCUSUM(double *, double *, int , int , int , int);
 
 // Sorting
+    
 void insertSort (double * , int , int );
-void sort_k_largest(double *, int, int, int);
+
+
+void sort_k_largest(double * , int , int, int);
+
+SEXP sort_k_largest_R(SEXP, SEXP, SEXP, SEXP);
+
+
+
+
+
+//function to swap variable
+void swap(double*, double*);
+int partition (double *, int, int);
+int quickselect(double * , int, int, int);
+void rec_partial_quicksort(double *, int, int, int);
+
+void partial_quicksort(double *, int , int);
+
+
+SEXP partial_quicksort_R(SEXP , SEXP, SEXP);
+
+

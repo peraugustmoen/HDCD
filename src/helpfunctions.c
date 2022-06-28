@@ -286,6 +286,29 @@ void CUSUM(double * cumsums, double * cusum, int s, int e, int p){
     return;
 }
 
+void singleCUSUM(double * cumsums, double * cusum, int s, int e, int p, int pos){
+    if(e-s<2){
+        return;
+    }
+    int n = e-s;
+    int t;
+    //printf("%f", cumsum[5]);
+    //int j = pos+1-s;
+    for (int i = 0; i < p; ++i)
+    {
+        //for (int j = 1; j < n; ++j)
+        //{
+            t = pos;
+            cusum[cord_spec(i,0, p)] = sqrt(((double)(e-t))/((e-s)*(t-s))) *(cumsums[cord_spec(i,t+1,p)]-cumsums[cord_spec(i,s+1,p)])
+            - sqrt(((double)(t-s))/((e-s)*(e-t)))*(cumsums[cord_spec(i,e+1,p)] - cumsums[cord_spec(i,t+1,p)]);
+
+        //}
+
+    }
+
+    return;
+}
+
 SEXP CUSUM_R(SEXP XI, SEXP sI, SEXP eI, SEXP pI, SEXP nI){
 	PROTECT(XI);
 	PROTECT(sI);

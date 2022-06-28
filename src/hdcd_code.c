@@ -132,6 +132,7 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
         // if T<= 0, check if P >0:
         if(twologn>0 && localdetected ==0){
             sort_k_largest(cusum + cord_spec(0,j,p) , twologn, 0, p);
+            //partial_quicksort(cusum + cord_spec(0,j,p) , p , twologn);
             double cumsum = 0;
             int prev = 0;
 

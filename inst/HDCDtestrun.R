@@ -1,15 +1,15 @@
 library(HDCD)
 
 #multiple change-points:
-p = 10000
-n =100
+p = 1000
+n =10000
 mus = matrix(0, nrow=p, ncol=n)
 noise = matrix(rnorm(n*p), nrow=p, ncol=n)
 etas = c(round(n/4),round(2*n/4),round(3*n/4))
 randomdense =rnorm(p)
 randomdense = randomdense/norm(randomdense,type="2")*sqrt(p)
 randomdense = randomdense/p^(1/4)/sqrt(n)*12
-k = 1
+k = 25
 mus[,round(etas[1]+1):n] = mus[,round(etas[1]+1):n] + sqrt(2*max(log(exp(1)*p*log(n)/k^2), log(n)))*matrix(rep(c(rep(1,k)*1/sqrt(n)*10, rep(0,p-k)), n-round(etas[1])) ,nrow=p)
 mus[,round(etas[2]+1):n] = mus[,round(etas[2]+1):n] + matrix(rep(randomdense, n-round(etas[2])) ,nrow=p)*1.2
 mus[,round(etas[3]+1):n] = mus[,round(etas[3]+1):n] + matrix(rep(rep(1,p)/p^(1/4)/sqrt(n)*12, n-round(etas[3])) ,nrow=p)*1.2
@@ -27,13 +27,13 @@ plot(X[1,])
 # lambda = 4*sqrt(log(p*n)) is the theoretically justified value of lambda
 # while lambda = sqrt(log(p*log(n))/2) is what wang and samworth recommend in practice.
 
-xi = 8*sqrt(log(p*n))
-lambda = sqrt(log(p*log(n)))
+xi = 4*sqrt(log(p*n))
+lambda = 2*sqrt(log(p*log(n)))
 #lambda = xi
 #lambda = 4*sqrt(log(p*n))
 
-system.time({res = Inspect(X[,], xi=xi, alpha = 1+1/6, K = 7,eps=1e-10,
-              lambda = lambda, maxiter=10000,debug=FALSE)})
+#system.time({res = Inspect(X[,], xi=xi, alpha = 1+1/6, K = 7,eps=1e-10,
+#              lambda = lambda, maxiter=10000,debug=FALSE)})
 res$changepoints
 
 system.time({res2 = HDCD (X[,], 2,2, alpha = 1+1/6, K = 7, threshold_d_test = 2, 
@@ -51,15 +51,18 @@ res3$s
 #res2$coordinate
 
 
+system.time({res5 = Pilliat(X, threshold_d_const=4, threshold_bj_const=6, threshold_partial_const=4,
+                            K = 2, alpha = 1+1/6, debug =FALSE)})
+
+
+res5
 
 
 
-
-system.time({res3 = Scan (X[,],alpha = 1+1/6, K = 7,debug=FALSE)})
-#NOTE: 8, 2 corresponds to EQUAL PENALTIES
-res3$changepoints
-res3$s
-#res3$coordinate
+# system.time({res3 = Scan (X[,],alpha = 1+1/6, K = 7,debug=FALSE)})
+# #NOTE: 8, 2 corresponds to EQUAL PENALTIES
+# res3$changepoints
+# #res3$coordinate
 
 
 
