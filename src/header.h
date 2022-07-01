@@ -41,7 +41,8 @@ void insertSort (double * , int , int );
 
 
 void sort_k_largest(double * , int , int, int);
-
+void sort_k_largest_abs(double * , int , int, int);
+void sort_k_largest_int(int*, int , int, int);
 SEXP sort_k_largest_R(SEXP, SEXP, SEXP, SEXP);
 
 

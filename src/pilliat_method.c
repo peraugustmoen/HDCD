@@ -3,7 +3,7 @@
 
 int internal_check_segment_Pilliat(double * cumsums, double * cusum, int k, int len, int p, double * thresholds_partial, 
     int * thresholds_bj, double threshold_dense, int maxx,  int * detected,
-    int * vec, int debug){
+    int * vec, double * vec2, int debug){
     // require as[0] = 0
     //if(debug){
      // Rprintf("checking segment (%d,%d]\n", s,e);
@@ -23,8 +23,8 @@ int internal_check_segment_Pilliat(double * cumsums, double * cusum, int k, int 
 
     double cumsum = 0.0;
     int prev = -1;
-    double x; 
-    int N=0;
+    // double x; 
+    // int N=0;
     int j = 0;
 
     //for (int j = 0; j < e-s-1; ++j){
@@ -35,6 +35,7 @@ int internal_check_segment_Pilliat(double * cumsums, double * cusum, int k, int 
     for (int i = 0; i < p; ++i)
     {
         cumsum+= cusum[cord_spec(i,j, p)]*cusum[cord_spec(i,j, p)];
+        vec2[i] = cusum[cord_spec(i,j, p)]*cusum[cord_spec(i,j, p)];
     }
     if(cumsum > threshold_dense){
         *detected = 1;
@@ -42,10 +43,10 @@ int internal_check_segment_Pilliat(double * cumsums, double * cusum, int k, int 
     }
 
     // then partial sum:
-    R_qsort(&(cusum[cord_spec(0,j, p)]),1,p);
+    R_qsort(vec2,1,p);
 
     cumsum = 0.0;
-    prev = -1;
+    prev = p;
     z = 1;
     int c = 0;
     int i = 0;
@@ -54,9 +55,9 @@ int internal_check_segment_Pilliat(double * cumsums, double * cusum, int k, int 
         if(z>p){
             break;
         }
-        for (i = prev+1; i <=z; ++i)
+        for (i = prev-1; i >= p-z; --i)
         {
-            cumsum +=cusum[cord_spec(i,j, p)]*cusum[cord_spec(i,j, p)];
+            cumsum +=vec2[i];
         }
 
         if (cumsum> thresholds_partial[c])
@@ -64,7 +65,7 @@ int internal_check_segment_Pilliat(double * cumsums, double * cusum, int k, int 
             *detected = 1;
             return 1;
         }
-        prev = z;
+        prev = p-z;
         c++;
         z = 2*z;
 
@@ -117,7 +118,7 @@ int internal_check_segment_Pilliat(double * cumsums, double * cusum, int k, int 
 
 void cPilliat_call(double * x, int n, int p, int* changepoints,
                 double * thresholds_partial, double threshold_dense, int * thresholds_bj, double *cumsums, int* lens, int lenLens,
-                int * vec, int K, double * cusum, int* changepoint_counter, int * teststat,
+                int * vec, double * vec2, int K, double * cusum, int* changepoint_counter, int * teststat,
                 int * startpoints, int* endpoints, int maxx, int debug){
     if(debug){
         Rprintf("cPilliat_call! n= %d, p = %d", n, p);
@@ -138,7 +139,7 @@ void cPilliat_call(double * x, int n, int p, int* changepoints,
     int stop = 0;
     int k = 0;
     int res = 0;
-    int intersects = 0;
+    //int intersects = 0;
     int t1 = 0;
     int t2 = 0;
     int check = 1;
@@ -166,7 +167,7 @@ void cPilliat_call(double * x, int n, int p, int* changepoints,
                     Rprintf("checking k = %d, l = %d, interval [%d, %d)\n", k, len, k-1, k+1);
                 }
                 res = internal_check_segment_Pilliat(cumsums, cusum, k, len,  p, thresholds_partial, 
-                thresholds_bj, threshold_dense, maxx, &detected,vec, debug);
+                thresholds_bj, threshold_dense, maxx, &detected,vec, vec2, debug);
 
                 if(detected){
                     if(debug){
@@ -209,7 +210,7 @@ void cPilliat_call(double * x, int n, int p, int* changepoints,
                 }
                 if(check){
                     res = internal_check_segment_Pilliat(cumsums, cusum, k, len,  p, thresholds_partial, 
-                            thresholds_bj, threshold_dense,  maxx, &detected,vec, debug);
+                            thresholds_bj, threshold_dense,  maxx, &detected,vec, vec2, debug);
                 }
                 
 
@@ -351,9 +352,11 @@ SEXP cPilliat(SEXP XI,SEXP nI, SEXP pI,SEXP thresholds_partialI, SEXP threshold_
     memset(cusum, 0, sizeof(double)*p);
 
     SEXP vecSEXP = PROTECT(allocVector(INTSXP, maxx));
-
     int * vec = INTEGER(vecSEXP);
     memset(vec, 0, sizeof(int)*maxx);
+    SEXP vec2SEXP = PROTECT(allocVector(REALSXP, p));
+    double * vec2 = REAL(vec2SEXP);
+    memset(vec2, 0, sizeof(double)*p);
 
 
 
@@ -365,7 +368,7 @@ SEXP cPilliat(SEXP XI,SEXP nI, SEXP pI,SEXP thresholds_partialI, SEXP threshold_
 
     cPilliat_call(X, n, p, changepoints,
                 thresholds_partial, threshold_dense, thresholds_bj,cumsums, lens, lenLens,
-                vec, K, cusum, changepoint_counter_ptr, teststat,
+                vec, vec2, K, cusum, changepoint_counter_ptr, teststat,
                 startpoints, endpoints, maxx, debug);
 
     /*cPilliat_call(X, -1, n-1, n, p, 1, changepoints,changepoint_counter_ptr,  depthcounter,
@@ -402,7 +405,7 @@ SEXP cPilliat(SEXP XI,SEXP nI, SEXP pI,SEXP thresholds_partialI, SEXP threshold_
 
     setAttrib(ret, R_NamesSymbol, names);
 
-    UNPROTECT(21);
+    UNPROTECT(22);
     return ret;
 }
 
@@ -498,3 +501,501 @@ SEXP cHDCD_single(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI,
 
 
 }*/
+
+
+
+
+SEXP cPilliat_test(SEXP XI,SEXP nI, SEXP pI,SEXP thresholds_partialI, SEXP threshold_denseI, SEXP thresholds_bjI,
+    SEXP maxxI, SEXP debugI){
+
+    PROTECT(XI);
+    PROTECT(nI);
+    PROTECT(pI);
+
+    PROTECT(thresholds_partialI);
+    PROTECT(threshold_denseI);
+    PROTECT(thresholds_bjI);
+    
+    PROTECT(maxxI);
+    PROTECT(debugI);
+
+    double * X = REAL(XI);
+    int n = *(INTEGER(nI));
+    int p = *(INTEGER(pI));
+    double *thresholds_partial = (REAL(thresholds_partialI));
+    double threshold_dense = *(REAL(threshold_denseI));
+    int *thresholds_bj = (INTEGER(thresholds_bjI));
+    int maxx = *INTEGER(maxxI);
+    int debug = *INTEGER(debugI);
+
+
+    SEXP out = PROTECT(allocVector(INTSXP, 1));
+    int *result  = INTEGER(out);
+    *result = 0;
+
+    SEXP testposSEXP = PROTECT(allocVector(INTSXP, n));
+    int *testpos  = INTEGER(testposSEXP);
+    memset(testpos, 0, sizeof(int)*n);
+
+
+
+    // find test poses
+    int count = 0;
+    int s = -1;
+    int e = n-1;
+    int middle = (s+e)/2;
+    testpos[count++] = middle;
+    int jump = 2;
+
+ 
+
+    while(middle + jump < e || middle - jump > s){
+        if(middle + jump <e){
+            testpos[count++] = middle + jump;
+        }
+        if(middle - jump > s){
+            testpos[count++] = middle - jump;
+        }
+        jump = jump*2;
+    }
+
+    R_qsort_int(testpos,1,count);
+
+    SEXP vecSEXP = PROTECT(allocVector(INTSXP, maxx));
+    int * vec = INTEGER(vecSEXP);
+    memset(vec, 0, sizeof(int)*maxx);
+
+    SEXP vec2SEXP = PROTECT(allocVector(REALSXP, p));
+    double * vec2 = REAL(vec2SEXP);
+    memset(vec2, 0, sizeof(double)*p);
+
+    SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
+    double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
+    memset(cumsums, 0, p*(n+1)*sizeof(double));
+
+    for (int j = 1; j <=n; ++j)
+    {
+        for (int i = 0; i < p; ++i)
+        {
+            //#define cord_spec(r,c, D) ((r) + (D)*(c))
+            cumsums[cord_spec(i,j,p)] = X[cord_spec(i,j-1, p)] +cumsums[cord_spec(i,j-1, p)];
+        }
+    }
+
+    SEXP cusumSEXP = PROTECT(allocVector(REALSXP, p));
+    double * cusum = REAL(cusumSEXP);
+    memset(cusum, 0, sizeof(double)*p);
+
+    int testpoint;
+    //int detected = 0;
+    int tmp;
+    int z;
+    double cumsum;
+    int prev;
+    //int NN;
+    int j;
+    for (int tt = 0; tt < count; ++tt)
+    {
+        testpoint = testpos[tt];
+        singleCUSUM(cumsums, cusum, s, e, p, testpoint);
+        //memset(tmpvec, 0, sizeof(double)*len_as);
+        //singleCUSUM(cumsums, cusum, k-len,e, p, k); 
+        z = 0;
+
+        cumsum = 0.0;
+        prev = -1;
+        //NN=0;
+        j = 0;
+
+
+        // first check dense:
+
+        cumsum = -p;
+        for (int i = 0; i < p; ++i)
+        {
+            cumsum+= cusum[cord_spec(i,j, p)]*cusum[cord_spec(i,j, p)];
+            vec2[i] = cusum[cord_spec(i,j, p)]*cusum[cord_spec(i,j, p)];
+        }
+        if(cumsum > threshold_dense){
+            if(debug){
+                Rprintf("Detected dense in %d, val %f, thresh %f\n", testpoint, cumsum, threshold_dense);
+            }
+            *result = 1;
+            break;
+        }
+
+        // then partial sum:
+        R_qsort(vec2,1,p);
+
+        cumsum = 0.0;
+        prev = p;
+        z = 1;
+        int c = 0;
+        int i = 0;
+        while(1)
+        {
+            if(z>p){
+                break;
+            }
+            for (i = prev-1; i >= p-z; --i)
+            {
+                cumsum +=vec2[i];
+            }
+
+            if (cumsum> thresholds_partial[c])
+            {
+                *result = 1;
+                if(debug){
+                    Rprintf("Partial stat detected at sparsity %d, pos %d. val = %f, thresh = %f.\n", 
+                        z, testpoint, cumsum, thresholds_partial[c]);
+                }
+                break;
+            }
+            prev = p-z;
+            c++;
+            z = 2*z;
+
+
+        }
+        if(*result){
+            break;
+        }
+        // then berk jones:
+        //for (int h = 0; h <= maxx; ++h)
+        //{
+        tmp = 0;
+        memset(vec, 0, sizeof(int)*maxx );
+
+        for (int i = 0; i < p; ++i)
+        {
+            tmp = (int)  fabs(cusum[cord_spec(i,j, p)]);
+            //if(debug){
+            //    Rprintf("val = %f, res = %d\n",fabs(cusum[cord_spec(i,j, p)]), tmp );
+            //}
+
+            for (int h = 0; h < tmp && h<maxx; ++h)
+            {
+                vec[h]++;
+            }
+                
+        }
+
+        for (int h = 0; h < maxx; ++h)
+        {
+            if(vec[h] > thresholds_bj[h]){
+                *result = 1;
+                if(debug){
+                    Rprintf("Berk Jones detected at x = %d, pos %d. Count = %d, thresh = %d.\n", 
+                        h, testpoint, vec[h], thresholds_bj[h]);
+                }
+                break;
+            }
+        }
+
+        if(*result){
+            break;
+        }
+    }
+
+
+    UNPROTECT(14);
+    return(out);
+
+}
+
+
+SEXP cPilliat_test_calibrate(SEXP nI, SEXP pI,SEXP NI, SEXP tolnI,
+    SEXP maxxI, SEXP log2pI, SEXP debugI){
+
+    PROTECT(nI);
+    PROTECT(pI);
+    PROTECT(log2pI);
+
+    PROTECT(NI);
+    PROTECT(tolnI);
+    
+    PROTECT(maxxI);
+    PROTECT(debugI);
+
+    int n = *(INTEGER(nI));
+    int toln = *(INTEGER(tolnI));
+    int N = *(INTEGER(NI));
+    int p = *(INTEGER(pI));
+    int log2p = *(INTEGER(log2pI));
+    int maxx = *INTEGER(maxxI);
+    int debug = *INTEGER(debugI);
+
+    if(debug){
+        Rprintf("n = %d\n",n);
+        Rprintf("p = %d\n",p);
+        Rprintf("N = %d\n",N);
+        Rprintf("toln = %d\n",toln);
+        Rprintf("log2p = %d\n",log2p);
+        Rprintf("maxx = %d\n",maxx);
+        //return(NULL);
+    }
+
+    SEXP maxvals_partialSEXP = PROTECT(allocVector(REALSXP, log2p*N));
+    double * maxvals_partial = REAL(maxvals_partialSEXP);
+    memset(maxvals_partial, 0, sizeof(double)*log2p*N);
+
+    SEXP maxvals_denseSEXP = PROTECT(allocVector(REALSXP, N));
+    double * maxvals_dense = REAL(maxvals_denseSEXP);
+    for (int i = 0; i < N; ++i)
+    {
+        maxvals_dense[i] = NEGINF;
+    }
+
+    SEXP maxvals_bjSEXP = PROTECT(allocVector(INTSXP, maxx*N));
+    int * maxvals_bj = INTEGER(maxvals_bjSEXP);
+    memset(maxvals_bj, 0, sizeof(int)*maxx*N);
+
+
+
+    
+
+    SEXP testposSEXP = PROTECT(allocVector(INTSXP, n));
+    int *testpos  = INTEGER(testposSEXP);
+    memset(testpos, 0, sizeof(int)*n);
+
+    // find test poses
+    int count = 0;
+    int s = -1;
+    int e = n-1;
+    int middle = (s+e)/2;
+    testpos[count++] = middle;
+    int jump = 2;
+
+ 
+
+    while(middle + jump < e || middle - jump > s){
+        if(middle + jump <e){
+            testpos[count++] = middle + jump;
+        }
+        if(middle - jump > s){
+            testpos[count++] = middle - jump;
+        }
+        jump = jump*2;
+    }
+
+    R_qsort_int(testpos,1,count);
+    if(debug){
+        Rprintf("Testposes:\n");
+        for (int i = 0; i < count; ++i)
+        {
+            Rprintf("%d\n",testpos[i]);
+        }
+    }
+
+    SEXP vecSEXP = PROTECT(allocVector(INTSXP, maxx));
+    int * vec = INTEGER(vecSEXP);
+    memset(vec, 0, sizeof(int)*maxx);
+
+    SEXP vec2SEXP = PROTECT(allocVector(REALSXP, p));
+    double * vec2 = REAL(vec2SEXP);
+    memset(vec2, 0, sizeof(double)*p);
+
+
+    SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
+    double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
+    memset(cumsums, 0, p*(n+1)*sizeof(double));
+
+
+
+    SEXP cusumSEXP = PROTECT(allocVector(REALSXP, p));
+    double * cusum = REAL(cusumSEXP);
+    memset(cusum, 0, sizeof(double)*p);
+
+
+
+    int testpoint;
+    //int detected = 0;
+    int tmp;
+    int z;
+    double cumsum;
+    int prev;
+    //int NN;
+    int j;
+
+    GetRNGstate();
+
+    for (int k = 0; k < N; ++k)
+    {
+        
+        // generate X
+        memset(cumsums, 0, p*sizeof(double));
+
+        for (int i = 0; i < p; ++i)
+        {
+            for (j = 0; j < n; ++j)
+            {
+                cumsums[cord_spec(i,j+1,p)] = rnorm(0.0, 1.0) +cumsums[cord_spec(i,j, p)];
+            }
+        }
+
+
+
+
+ 
+        for (int tt = 0; tt < count; ++tt)
+        {
+            if(debug && !(k)){
+                Rprintf("pos %d\n",testpos[tt]);
+            }
+            testpoint = testpos[tt];
+            singleCUSUM(cumsums, cusum, s, e, p, testpoint);
+            //memset(tmpvec, 0, sizeof(double)*len_as);
+            //singleCUSUM(cumsums, cusum, k-len,e, p, k); 
+            z = 0;
+
+            cumsum = 0.0;
+            prev = -1;
+            //NN=0;
+            j = 0;
+
+
+            // first check dense:
+
+            cumsum = -p;
+            for (int i = 0; i < p; ++i)
+            {
+                cumsum+= cusum[cord_spec(i,j, p)]*cusum[cord_spec(i,j, p)];
+                vec2[i] = cusum[cord_spec(i,j, p)]*cusum[cord_spec(i,j, p)];
+            }
+
+            if(cumsum > maxvals_dense[cord_spec(k,0, N)]){
+                maxvals_dense[cord_spec(k,0, N)] = cumsum;
+            }
+
+
+            // then partial sum:
+            R_qsort(vec2,1,p);
+
+            cumsum = 0.0;
+            prev = p;
+            z = 1;
+            int c = 0;
+            int i = 0;
+            while(1)
+            {
+                if(z>p){
+                    break;
+                }
+                for (i = prev-1; i >= p-z; --i)
+                {
+                    cumsum +=vec2[i];
+                }
+
+                if (cumsum> maxvals_partial[cord_spec(k,c, N)])
+                {
+                    maxvals_partial[cord_spec(k,c, N)] = cumsum;
+                    if(debug){
+                        Rprintf("cumsum at partial %d = %f\n", z, cumsum);
+                    }
+                }
+                prev = p-z;
+                c++;
+                z = 2*z;
+
+
+            }
+      
+            // then berk jones:
+            //for (int h = 0; h <= maxx; ++h)
+            //{
+            tmp = 0;
+            memset(vec, 0, sizeof(int)*maxx );
+
+            for (int i = 0; i < p; ++i)
+            {
+                tmp = (int)  fabs(cusum[cord_spec(i,j, p)]);
+                //if(debug){
+                //    Rprintf("val = %f, res = %d\n",fabs(cusum[cord_spec(i,j, p)]), tmp );
+                //}
+               
+
+                for (int h = 0; h < tmp ; ++h)
+                {
+                    if(h>=maxx){
+                        break;
+                    }
+                    vec[h]++;
+                }
+                    
+                          
+            }
+
+            for (int h = 0; h < maxx; ++h)
+            {
+                if(vec[h] > maxvals_bj[cord_spec(k,h, N)]){
+                    maxvals_bj[cord_spec(k,h, N)] = vec[h];
+                    if(debug){
+                        Rprintf("BJ: at h = %d we found %d counts\n", h, vec[h]);
+                    }
+                }
+            }
+
+        }
+    }
+
+    PutRNGstate();
+
+    SEXP thresholds_partialSEXP = PROTECT(allocVector(REALSXP, log2p ));
+    double * thresholds_partial = REAL(thresholds_partialSEXP);
+    memset(thresholds_partial, 0, sizeof(double)*log2p);
+    SEXP threshold_denseSEXP = PROTECT(allocVector(REALSXP, 1));
+    double * threshold_dense = REAL(threshold_denseSEXP);
+    *threshold_dense = 0.0;
+    SEXP thresholds_bjSEXP = PROTECT(allocVector(INTSXP, maxx ));
+    int * thresholds_bj = INTEGER(thresholds_bjSEXP);
+    memset(thresholds_bj, 0, sizeof(int)*maxx);
+
+    //int kkk = 1;
+    for (int z = 0; z < log2p; ++z){
+        sort_k_largest(maxvals_partial + cord_spec(0,z,N) , toln, 0, N);
+        thresholds_partial[z] = maxvals_partial[cord_spec((toln-1), z, N)];
+        //if(kkk >2 *sqrt(p*log(n))){
+        //   thresholds_partial[z] = 100000000.0;
+        //}
+
+        //kkk *=2;
+
+    }
+
+    for (int z = 0; z < maxx; ++z){
+        sort_k_largest_int(maxvals_bj + cord_spec(0,z,N) , toln, 0, N);
+        thresholds_bj[z] = maxvals_bj[cord_spec((toln-1), z, N)];
+        //thresholds_bj[z] = p;
+
+    }
+    sort_k_largest(maxvals_dense, toln, 0, N);
+    threshold_dense[0] = maxvals_dense[toln-1];
+
+    SEXP ret = PROTECT(allocVector(VECSXP, 3)); //the list to be returned in R
+    SET_VECTOR_ELT(ret, 0, thresholds_partialSEXP);
+    SET_VECTOR_ELT(ret, 1, threshold_denseSEXP);
+    SET_VECTOR_ELT(ret, 2, thresholds_bjSEXP);
+
+    // creating list of names/titles to be returned in the output list
+    SEXP names = PROTECT(allocVector(STRSXP, 3));
+    //SET_STRING_ELT(names, 0, mkChar("CUSUM"));
+    SET_STRING_ELT(names, 0, mkChar("thresholds_partial"));
+    SET_STRING_ELT(names, 1, mkChar("threshold_dense"));
+    SET_STRING_ELT(names, 2, mkChar("thresholds_bj"));
+
+
+    setAttrib(ret, R_NamesSymbol, names);
+
+
+    UNPROTECT(20);
+    return(ret);
+
+
+
+
+
+}
+
+
+
+

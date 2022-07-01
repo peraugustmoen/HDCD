@@ -19,6 +19,23 @@ void insertSort (double * a, int v, int h) {
 } 
 
 
+void insertSort_int(int * a, int v, int h) {
+	
+	int i;
+	int t;
+	for ( int k = v ; k < h ; k++) {
+		t = a [k+1] ;
+		i=k;
+		while ( i >= v && a [i]*a[i] < t*t ) {
+			a [i+1] = a [i];
+			i--; 
+		}
+		a[i+1] = t; 
+	} 
+	
+} 
+
+
 /**
 *Sorts the array a in accordance with algoritm A2
 *
@@ -26,18 +43,58 @@ void insertSort (double * a, int v, int h) {
 *@param k 	Number of largest elements to be found
 **/
 
+void sort_k_largest_abs(double * a, int k, int start, int stop){
+	insertSort(a, start,start+ k-1);
+	int i;
+	double t ;
+
+	for ( int j = k + start; j < stop ; j++) {
+		if (fabs(a[j]) > fabs(a[k + start-1]) ) {
+			
+			t = a[j];
+			a[j] = a[k+start-1];
+			i=k-2 + start;
+			while ( i >= start && fabs(a [i]) < fabs(t) ) {
+				a [i+1] = a [i];
+				i--; 
+			}
+			a[i+1] = t; 	
+		}
+	}
+}
+
 void sort_k_largest(double * a, int k, int start, int stop){
 	insertSort(a, start,start+ k-1);
 	int i;
 	double t ;
 
 	for ( int j = k + start; j < stop ; j++) {
-		if (a[j]*a[j] > a[k + start-1]*a[k + start-1] ) {
+		if (a[j] > a[k + start-1] ) {
 			
 			t = a[j];
 			a[j] = a[k+start-1];
 			i=k-2 + start;
-			while ( i >= start && a [i]*a[i] < t*t ) {
+			while ( i >= start && a [i] < t ) {
+				a [i+1] = a [i];
+				i--; 
+			}
+			a[i+1] = t; 	
+		}
+	}
+}
+
+void sort_k_largest_int(int* a, int k, int start, int stop){
+	insertSort_int(a, start,start+ k-1);
+	int i;
+	int t ;
+
+	for ( int j = k + start; j < stop ; j++) {
+		if (a[j] > a[k + start-1] ) {
+			
+			t = a[j];
+			a[j] = a[k+start-1];
+			i=k-2 + start;
+			while ( i >= start && a [i] < t ) {
 				a [i+1] = a [i];
 				i--; 
 			}
@@ -146,6 +203,62 @@ SEXP partial_quicksort_R(SEXP vecI, SEXP kI, SEXP lenI){
 	partial_quicksort(vec, len,k);
 	UNPROTECT(3);
 	return(vecI);
+}
+
+SEXP sort_test(SEXP xI, SEXP nI){
+	PROTECT(xI);
+	PROTECT(nI);
+
+	double * x = REAL(xI);
+	int n = *(INTEGER(nI));
+
+	R_qsort(x,1,n);
+	UNPROTECT(2);
+	return(xI);
+
+}
+
+SEXP partialsum_test(SEXP xI, SEXP nI){
+	PROTECT(xI);
+	PROTECT(nI);
+
+	double * x = REAL(xI);
+	int n = *(INTEGER(nI));
+	
+	SEXP resSEXP= PROTECT(allocVector(REALSXP, n));
+	double * res = REAL(resSEXP);
+	memset(res, 0, sizeof(double)*n);
+	
+
+	R_qsort(x,1,n);
+
+	int prev = n;
+  int z = 1;
+  int c = 0;
+  int i = 0;
+  int j=0;
+  double cumsum=0;
+  while(1)
+  {
+      if(z>n){
+          break;
+      }
+      for (i = prev-1; i >= n-z; --i)
+      {
+          cumsum += x[cord_spec(i,j, n)]*x[cord_spec(i,j, n)];
+      }
+      
+      res[c] = cumsum;
+      prev = n-z;
+      c++;
+      z = 2*z;
+
+
+  }
+
+	UNPROTECT(3);
+	return(resSEXP);
+
 }
 
 
