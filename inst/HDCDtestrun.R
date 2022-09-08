@@ -1,7 +1,7 @@
 library(HDCD)
 
 #multiple change-points:
-p = 1000
+p = 500
 n =100
 mus = matrix(0, nrow=p, ncol=n)
 noise = matrix(rnorm(n*p), nrow=p, ncol=n)
@@ -9,7 +9,7 @@ etas = c(round(n/4),round(2*n/4),round(3*n/4))
 randomdense =rnorm(p)
 randomdense = randomdense/norm(randomdense,type="2")*sqrt(p)
 randomdense = randomdense/p^(1/4)/sqrt(n)*12
-k = 32
+k = 8
 mus[,round(etas[1]+1):n] = mus[,round(etas[1]+1):n] + 0.5*sqrt(2*max(log(exp(1)*p*log(n)/k^2), log(n)))*matrix(rep(c(rep(1,k)*1/sqrt(n)*10, rep(0,p-k)), n-round(etas[1])) ,nrow=p)
 mus[,round(etas[2]+1):n] = mus[,round(etas[2]+1):n] + matrix(rep(randomdense, n-round(etas[2])) ,nrow=p)*1.2
 mus[,round(etas[3]+1):n] = mus[,round(etas[3]+1):n] + matrix(rep(rep(1,p)/p^(1/4)/sqrt(n)*12, n-round(etas[3])) ,nrow=p)*1.2
@@ -105,6 +105,15 @@ res10$changepoints
 res10$s
 
 
+cc3 = Pilliat_calibrate(n,p, N=1000, tol=0.001,K = 2, alpha = 1+1/6,maxx = NULL, lens = NULL, debug=TRUE)
+
+system.time({res11= Pilliat(X, 
+                           K = 2, alpha = 1+1/6, empirical = TRUE, threshold_dense = cc3$threshold_dense, 
+                           thresholds_partial = cc3$thresholds_partial, thresholds_bj = cc3$thresholds_bj,debug =FALSE)})
+
+
+res11
+
 
 
 
@@ -113,12 +122,13 @@ res10$s
 # checking the modified (logn instead of logn4)
 
 
-system.time({res2 = HDCD_modified (X[,], 3,2, alpha = 1+1/6, K = 7, threshold_d_test = 3, 
-                          threshold_s_test = 1,debug= FALSE)})
+system.time({res2 = HDCD_modified (X[,], 4,1, alpha = 1+1/6, K = 7, threshold_d_test = 4, 
+                          threshold_s_test = 2, debug= FALSE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res2$changepoints
 res2$s
 #res2$coordinate
+ccc = HDCD_modified_calibrate(n,p, N=1000, tol=0.001,debug=FALSE)
 
 system.time({res3 = HDCD_modified (X[,], 3,2, alpha = 1+1/6, K = 7, threshold_d_test = 3, 
                           threshold_s_test = 1, droppartialsum = TRUE,debug= FALSE)})

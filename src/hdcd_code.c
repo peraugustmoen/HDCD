@@ -1601,7 +1601,7 @@ SEXP cHDCD_test(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI,
             for (int z = 0; z < len_as; ++z)
             {
                 tmp = tmpvec[z] - thresholds[z];
-                if(tmp>0 && ts[z] > twologn){
+                if(tmp>0){
                     detected = 1;
                     if(debug){
                         Rprintf("(Dropped partial sum) Detected in pos %d, thresh cusum, sparsity %d, val %f, thresh %f",

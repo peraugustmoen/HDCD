@@ -31,7 +31,10 @@ changepoint_test_Pilliat = function(X, empirical =FALSE, N = 100, tol = 0.05,
   
   if(empirical){
     if(is.null(thresholds_partial) || is.null(threshold_dense) || is.null(threshold_dense)){
-      res = changepoint_test_Pilliat_calibrate(n,p, as, nu_as, ts, twologn,N,tol,debug)
+      res = changepoint_test_Pilliat_calibrate(n,p, N=N, tol=tol,threshold_bj_const=threshold_bj_const,debug=debug)
+      thresholds_partial = res$thresholds_partial
+      thresholds_bj = res$thresholds_bj
+      threshold_dense = res$threshold_dense
     }
   }else{
     
@@ -77,7 +80,7 @@ changepoint_test_Pilliat = function(X, empirical =FALSE, N = 100, tol = 0.05,
     }
   }
   
-  if(debug){
+  if(TRUE){
     print(threshold_dense)
     print(thresholds_partial)
     print(thresholds_bj)

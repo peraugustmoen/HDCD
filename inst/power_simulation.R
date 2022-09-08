@@ -2,15 +2,18 @@ library(HDCD)
 library(doSNOW)
 library(foreach)
 
+#n = 100
+#p = 10000
 n = 100
-p = 10000
+p = 1000
 
-N = 5000
-Nsim = 1000
-tol = 1/2000
+N = 10000
+Nsim = 10000
+tol = 1/200
 
+#gridlen = 50
 gridlen = 50
-grid = seq(0,3, length.out = gridlen)
+grid = seq(0,6, length.out = gridlen)
 
 spars = c(1,10,30,100,500,1000)
 
@@ -21,13 +24,13 @@ tmp4 = rep(NA, Nsim) # without partial, log(n) instead of log(n^4)
 tmp5 = rep(NA, Nsim) # without partial, log(n) instead of log(n^4)
 
 res = array(NA, dim= c(length(spars),5, gridlen))
-
+set.seed(1996)
 thr = changepoint_test_HDCD_calibrate (n,p, as=NULL, nu_as=NULL, ts=NULL, twologn=NULL, N, tol,debug=TRUE)
 #thr
-
-thr2 = changepoint_test_Pilliat_calibrate(n,p,N = N, tol = tol ,debug=FALSE)
+set.seed(1996)
+thr2 = changepoint_test_Pilliat_calibrate(n,p,N = N, tol = tol/1.5 ,debug=FALSE)
 #thr2
-
+set.seed(1996)
 thr3 = changepoint_test_HDCD_modified_calibrate(n,p, as=NULL, nu_as=NULL, ts=NULL, twologn=NULL, N, tol,debug=TRUE)
 
 num_cores = 6
@@ -40,6 +43,7 @@ opts <- list(progress = progress)
 result = foreach(i = 1:length(spars),.options.snow = opts) %dopar% {
   #for (i in 1:length(spars)) {
   library(HDCD)
+  set.seed(i)
   res = array(NA, dim = c(5,gridlen))
   t = spars[i]
   mus = matrix(0, nrow=p, ncol=n)
@@ -94,11 +98,15 @@ for (i in 1:length(spars)) {
   res[i,,] = result[[i]]
 }
 
-plot(grid, res[4,1,],type="l") # without partial, logn4
-lines(grid,res[4,2,],type="l",col=2) # with partial, logn4
-lines(grid,res[4,3,],type="l", col=3) # pilliat
-lines(grid,res[4,4,],type="l", col=4) # without partial, logn
-lines(grid,res[4,5,],type="l", col=5) # with partial, logn
+
+
+sparind = 1
+res[sparind,,1]
+plot(grid, res[sparind,1,],type="l") # without partial, logn4
+lines(grid,res[sparind,2,],type="l",col=2) # with partial, logn4
+lines(grid,res[sparind,3,],type="l", col=3) # pilliat
+lines(grid,res[sparind,4,],type="l", col=4) # without partial, logn
+lines(grid,res[sparind,5,],type="l", col=5) # with partial, logn
 
 
 

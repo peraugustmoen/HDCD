@@ -218,7 +218,7 @@ HDCD_modified = function(X, threshold_d=2, threshold_s=2, alpha = 1+1/6, K = 7, 
   
   if(is.null(thresholds_test)){
     thresholds_test = nu_as[] 
-    thresholds_test[2:length(ss)] = threshold_s_test*(ss[2:length(ss)]*log(exp(1)*p*log(n)/ss[2:length(ss)]^2)+ log(n))
+    thresholds_test[2:length(ss)] = threshold_s_test*(ss[2:length(ss)]*log(exp(1)*p*log(n)/ss[2:length(ss)]^2)+ 2*log(n))
     thresholds_test[1] = threshold_d_test* (sqrt(p*log(n)) + log(n))
     
     if(debug){
@@ -229,7 +229,7 @@ HDCD_modified = function(X, threshold_d=2, threshold_s=2, alpha = 1+1/6, K = 7, 
   
   thresholds = nu_as[]
   
-  thresholds[2:length(ss)] = threshold_s*(ss[2:length(ss)]*log(exp(1)*p*log(n)/ss[2:length(ss)]^2)+ log(n))
+  thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)*p*log(n)/ss[2:length(ss)]^2)+ 2*log(n))
   #thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)-1 + sqrt(p*log(n^4))/ss[2:length(ss)]), log(n^4))
   #thresholds[2:length(ss)] = threshold_s*(ss[2:length(ss)]*log(exp(1)-1 + sqrt(p*log(n^4))/ss[2:length(ss)])+ log(n^4))
   
@@ -300,6 +300,54 @@ HDCD_modified = function(X, threshold_d=2, threshold_s=2, alpha = 1+1/6, K = 7, 
   
   
   return(res)
+}
+
+#' @export
+HDCD_modified_calibrate = function(n,p, as=NULL, nu_as=NULL, ts=NULL, twologn=NULL, lens = NULL,
+                          alpha = 1+1/6, K = 7, N, tol, fast = FALSE,debug=FALSE){
+  if(is.null(as) || is.null(nu_as) || is.null(ts) || is.null(twologn) ||
+     is.null(lens)){
+    lens = c(2)
+    last = 2
+    tmp = last
+    while(alpha*last<n){
+      #while(2*last<n){
+      tmp = last
+      last = floor(alpha*last)
+      if(last==tmp){
+        last = last+1
+      }
+      #last = last+1
+      lens= c(lens, last)
+    }
+    max_s = min(sqrt(p*log(n)), p)
+    log2ss = 0:floor(log(max_s, base=2))
+    ss = 2^(log2ss)
+    ss = c(p, rev(ss))
+    as = ss[]
+    as[2:length(ss)] = sqrt(2*log(exp(1)*p*log(n)/ss[2:length(ss)]^2))
+    as[1] = 0
+    nu_as = 1 + as*exp(dnorm(as, log=TRUE)-pnorm(as, lower.tail = FALSE, log=TRUE))
+    twologn = min(p, floor(2*log(n)))
+    ts = ss[]
+  }
+  if(debug){
+    print(n)
+    print(p)
+    print(N)
+    print(tol)
+  }
+  
+  toln = max(round(N*tol),1)
+  
+  
+  res= .Call(cHDCD_calibrate, as.integer(n), as.integer(p), as.integer(N),
+             as.integer(toln), as.integer(lens), as.integer(length(lens)),
+             as.integer(K), as.numeric(as), as.numeric(nu_as), as.integer(length(as)),
+             as.integer(twologn), as.integer(ts), as.integer(fast), as.integer(debug))
+  
+  return(res)
+  #return(NULL)
 }
 
 

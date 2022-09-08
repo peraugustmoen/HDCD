@@ -502,6 +502,412 @@ SEXP cHDCD_single(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI,
 
 }*/
 
+SEXP cPilliat_calibrate(SEXP nI, SEXP pI,SEXP NI, SEXP tolnI, SEXP lensI,SEXP lenLensI,SEXP KI,
+    SEXP maxxI, SEXP log2pI, SEXP debugI){
+
+    PROTECT(nI);
+    PROTECT(pI);
+    PROTECT(log2pI);
+    PROTECT(lensI);
+    PROTECT(lenLensI);
+    PROTECT(KI);
+    PROTECT(NI);
+    PROTECT(tolnI);
+    
+    PROTECT(maxxI);
+    PROTECT(debugI);
+
+    int n = *(INTEGER(nI));
+    int toln = *(INTEGER(tolnI));
+    int N = *(INTEGER(NI));
+    int p = *(INTEGER(pI));
+    int log2p = *(INTEGER(log2pI));
+    int maxx = *INTEGER(maxxI);
+    int lenLens = *(INTEGER(lenLensI));
+    int * lens = INTEGER(lensI);
+    int debug = *INTEGER(debugI);
+
+    if(debug){
+        Rprintf("n = %d\n",n);
+        Rprintf("p = %d\n",p);
+        Rprintf("N = %d\n",N);
+        Rprintf("toln = %d\n",toln);
+        Rprintf("log2p = %d\n",log2p);
+        Rprintf("maxx = %d\n",maxx);
+        //return(NULL);
+    }
+
+    SEXP maxvals_partialSEXP = PROTECT(allocVector(REALSXP, log2p*N));
+    double * maxvals_partial = REAL(maxvals_partialSEXP);
+    memset(maxvals_partial, 0, sizeof(double)*log2p*N);
+
+    SEXP maxvals_denseSEXP = PROTECT(allocVector(REALSXP, N));
+    double * maxvals_dense = REAL(maxvals_denseSEXP);
+    for (int i = 0; i < N; ++i)
+    {
+        maxvals_dense[i] = NEGINF;
+    }
+
+    SEXP maxvals_bjSEXP = PROTECT(allocVector(INTSXP, maxx*N));
+    int * maxvals_bj = INTEGER(maxvals_bjSEXP);
+    memset(maxvals_bj, 0, sizeof(int)*maxx*N);
+
+
+
+    
+
+
+    SEXP vecSEXP = PROTECT(allocVector(INTSXP, maxx));
+    int * vec = INTEGER(vecSEXP);
+    memset(vec, 0, sizeof(int)*maxx);
+
+    SEXP vec2SEXP = PROTECT(allocVector(REALSXP, p));
+    double * vec2 = REAL(vec2SEXP);
+    memset(vec2, 0, sizeof(double)*p);
+
+
+    SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
+    double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
+    memset(cumsums, 0, p*(n+1)*sizeof(double));
+
+
+
+    SEXP cusumSEXP = PROTECT(allocVector(REALSXP, p));
+    double * cusum = REAL(cusumSEXP);
+    memset(cusum, 0, sizeof(double)*p);
+
+
+    int jump;
+    int jj;
+    int tmp;
+    int z;
+    double cumsum;
+    int prev;
+    int j;
+    int len = 0;
+    int k = 0;
+    int h;
+    int i;
+    int v;
+    int c;
+    int stop;
+
+    GetRNGstate();
+
+    for (k = 0; k < N; ++k)
+    {
+        
+        // generate X
+        memset(cumsums, 0, p*sizeof(double));
+
+        for (i = 0; i < p; ++i)
+        {
+            for (j = 0; j < n; ++j)
+            {
+                cumsums[cord_spec(i,j+1,p)] = rnorm(0.0, 1.0) +cumsums[cord_spec(i,j, p)];
+            }
+        }
+
+
+        for (j = 0; j < lenLens; ++j)
+        {
+            len = lens[j]-1;
+            if(debug){
+                Rprintf("j=%d, len = %d\n", j, len);
+            }
+
+            jump = len /2;
+
+            if(len ==1){
+                for (v = 0; v < n-1; ++v)
+                {
+                    // checv segments
+                    if(debug){
+                        Rprintf("checking v = %d, l = %d, interval [%d, %d)\n", v, len, v-1, v+1);
+                    }
+                    //res = internal_check_segment_Pilliat(cumsums, cusum, v, len,  p, thresholds_partial, 
+                    //thresholds_bj, threshold_dense, maxx, &detected,vec, vec2, debug);
+
+                
+
+                    // compute CUSUM
+                    singleCUSUM(cumsums, cusum, v-len, v+len, p, v); 
+
+                    z = 0;
+
+                    cumsum = 0.0;
+                    prev = -1;
+                    // double x; 
+                    // int N=0;
+                    
+
+
+                    // first check dense:
+
+                    cumsum = -p;
+                    for (i = 0; i < p; ++i)
+                    {
+                        cumsum+= cusum[cord_spec(i,0, p)]*cusum[cord_spec(i,0, p)];
+                        vec2[i] = cusum[cord_spec(i,0, p)]*cusum[cord_spec(i,0, p)];
+                    }
+                    if(cumsum > maxvals_dense[cord_spec(k,0,N)]){
+                        maxvals_dense[cord_spec(k,0,N)] = cumsum;
+                        //return 0;
+                    }
+
+                    // then partial sum:
+                    R_qsort(vec2,1,p);
+
+                    cumsum = 0.0;
+                    prev = p;
+                    z = 1;
+                    int c = 0;
+                    int i = 0;
+                    while(1)
+                    {
+                        if(z>p){
+                            break;
+                        }
+                        for (i = prev-1; i >= p-z; --i)
+                        {
+                            cumsum +=vec2[i];
+                        }
+
+                        if (cumsum> maxvals_partial[cord_spec(k,c,N)])
+                        {
+                            maxvals_partial[cord_spec(k,c,N)] = cumsum;
+                        }
+                        prev = p-z;
+                        c++;
+                        z = 2*z;
+
+
+                    }
+                    // then berk jones:
+                    //for (int h = 0; h <= maxx; ++h)
+                    //{
+                    tmp = 0;
+                    memset(vec, 0, sizeof(int)*maxx );
+
+                    for (i = 0; i < p; ++i)
+                    {
+                        tmp = (int)  fabs(cusum[cord_spec(i,0, p)]);
+                        //if(debug){
+                        //    Rprintf("val = %f, res = %d\n",fabs(cusum[cord_spec(i,0, p)]), tmp );
+                        //}
+                        if(tmp == 0){
+                            break;
+                        }else{
+
+                            for ( h = 0; h < tmp && h<maxx; ++h)
+                            {
+                                vec[h]++;
+                            }
+                            
+                        }             
+                    }
+
+                    for (int h = 0; h < maxx; ++h)
+                    {
+                        if(vec[h] > maxvals_bj[cord_spec(k,h,N)]){
+                            maxvals_bj[cord_spec(k,h,N)] = vec[h];
+                            // if(debug){
+                            //     Rprintf("Berv 0ones detected at x = %d, seg [%d,%d). Count = %d, thresh = %d.\n", 
+                            //         h, v-len, v+len, vec[h], thresholds_b0[h]);
+                            // }
+                            //return 2;
+                        }
+                    }
+
+
+                    
+                }
+            }
+            else{
+                //stop=0;
+                v = len-1;
+                jj = 2;
+                stop = 0;
+                while(1){
+                    if(v + len>=n || v-len<-1){
+                        break;
+                    }
+                    
+                    //res = internal_checv_segment_Pilliat(cumsums, cusum, v, len,  p, thresholds_partial, 
+                    //        thresholds_bj, threshold_dense,  maxx, &detected,vec, vec2, debug);
+                    if(debug){
+                        Rprintf("checking v = %d, l = %d, interval [%d, %d)\n", v, len, v-1, v+1);
+                    }
+                    //res = internal_check_segment_Pilliat(cumsums, cusum, v, len,  p, thresholds_partial, 
+                    //thresholds_bj, threshold_dense, maxx, &detected,vec, vec2, debug);
+
+                
+
+                    // compute CUSUM
+                    singleCUSUM(cumsums, cusum, v-len, v+len, p, v); 
+
+                    z = 0;
+
+                    cumsum = 0.0;
+                    prev = -1;
+                    // double x; 
+                    // int N=0;
+                    
+
+
+                    // first check dense:
+
+                    cumsum = -p;
+                    for (i = 0; i < p; ++i)
+                    {
+                        cumsum+= cusum[cord_spec(i,0, p)]*cusum[cord_spec(i,0, p)];
+                        vec2[i] = cusum[cord_spec(i,0, p)]*cusum[cord_spec(i,0, p)];
+                    }
+                    if(cumsum > maxvals_dense[cord_spec(k,0,N)]){
+                        maxvals_dense[cord_spec(k,0,N)] = cumsum;
+                        //return 0;
+                    }
+
+                    // then partial sum:
+                    R_qsort(vec2,1,p);
+
+                    cumsum = 0.0;
+                    prev = p;
+                    z = 1;
+                    c = 0;
+                    i = 0;
+                    while(1)
+                    {
+                        if(z>p){
+                            break;
+                        }
+                        for (i = prev-1; i >= p-z; --i)
+                        {
+                            cumsum +=vec2[i];
+                        }
+
+                        if (cumsum> maxvals_partial[cord_spec(k,c,N)])
+                        {
+                            maxvals_partial[cord_spec(k,c,N)] = cumsum;
+                        }
+                        prev = p-z;
+                        c++;
+                        z = 2*z;
+
+
+                    }
+                    // then berk jones:
+                    //for (int h = 0; h <= maxx; ++h)
+                    //{
+                    tmp = 0;
+                    memset(vec, 0, sizeof(int)*maxx );
+
+                    for (i = 0; i < p; ++i)
+                    {
+                        tmp = (int)  fabs(cusum[cord_spec(i,0, p)]);
+                        //if(debug){
+                        //    Rprintf("val = %f, res = %d\n",fabs(cusum[cord_spec(i,0, p)]), tmp );
+                        //}
+                        if(tmp == 0){
+                            break;
+                        }else{
+
+                            for ( h = 0; h < tmp && h<maxx; ++h)
+                            {
+                                vec[h]++;
+                            }
+                            
+                        }             
+                    }
+
+                    for (h = 0; h < maxx; ++h)
+                    {
+                        if(vec[h] > maxvals_bj[cord_spec(k,h,N)]){
+                            maxvals_bj[cord_spec(k,h,N)] = vec[h];
+                            // if(debug){
+                            //     Rprintf("Berv 0ones detected at x = %d, seg [%d,%d). Count = %d, thresh = %d.\n", 
+                            //         h, v-len, v+len, vec[h], thresholds_b0[h]);
+                            // }
+                            //return 2;
+                        }
+                    }
+
+                    if(stop){
+                        break;
+                    }
+                    v = (jj++)*jump;
+                    if(v>= n - len-1){
+                        v = n-len-1;
+                        stop=1;
+                    }
+                
+                
+                }
+            }
+        }
+
+    }
+
+
+ 
+
+    PutRNGstate();
+
+    SEXP thresholds_partialSEXP = PROTECT(allocVector(REALSXP, log2p ));
+    double * thresholds_partial = REAL(thresholds_partialSEXP);
+    memset(thresholds_partial, 0, sizeof(double)*log2p);
+    SEXP threshold_denseSEXP = PROTECT(allocVector(REALSXP, 1));
+    double * threshold_dense = REAL(threshold_denseSEXP);
+    *threshold_dense = 0.0;
+    SEXP thresholds_bjSEXP = PROTECT(allocVector(INTSXP, maxx ));
+    int * thresholds_bj = INTEGER(thresholds_bjSEXP);
+    memset(thresholds_bj, 0, sizeof(int)*maxx);
+
+    //int kkk = 1;
+    for (int z = 0; z < log2p; ++z){
+        sort_k_largest(maxvals_partial + cord_spec(0,z,N) , toln, 0, N);
+        thresholds_partial[z] = maxvals_partial[cord_spec((toln-1), z, N)];
+        //if(kkk >2 *sqrt(p*log(n))){
+        //   thresholds_partial[z] = 100000000.0;
+        //}
+
+        //kkk *=2;
+
+    }
+
+    for (int z = 0; z < maxx; ++z){
+        sort_k_largest_int(maxvals_bj + cord_spec(0,z,N) , toln, 0, N);
+        thresholds_bj[z] = maxvals_bj[cord_spec((toln-1), z, N)];
+        //thresholds_bj[z] = p;
+
+    }
+    sort_k_largest(maxvals_dense, toln, 0, N);
+    threshold_dense[0] = maxvals_dense[toln-1];
+
+    SEXP ret = PROTECT(allocVector(VECSXP, 3)); //the list to be returned in R
+    SET_VECTOR_ELT(ret, 0, thresholds_partialSEXP);
+    SET_VECTOR_ELT(ret, 1, threshold_denseSEXP);
+    SET_VECTOR_ELT(ret, 2, thresholds_bjSEXP);
+
+    // creating list of names/titles to be returned in the output list
+    SEXP names = PROTECT(allocVector(STRSXP, 3));
+    //SET_STRING_ELT(names, 0, mkChar("CUSUM"));
+    SET_STRING_ELT(names, 0, mkChar("thresholds_partial"));
+    SET_STRING_ELT(names, 1, mkChar("threshold_dense"));
+    SET_STRING_ELT(names, 2, mkChar("thresholds_bj"));
+
+
+    setAttrib(ret, R_NamesSymbol, names);
+
+
+    UNPROTECT(22);
+    return(ret);
+
+
+
+
+
+}
 
 
 
@@ -673,8 +1079,11 @@ SEXP cPilliat_test(SEXP XI,SEXP nI, SEXP pI,SEXP thresholds_partialI, SEXP thres
             //    Rprintf("val = %f, res = %d\n",fabs(cusum[cord_spec(i,j, p)]), tmp );
             //}
 
-            for (int h = 0; h < tmp && h<maxx; ++h)
+            for (int h = 0; h < tmp; ++h)
             {
+                if(h>=maxx){
+                    break;
+                }
                 vec[h]++;
             }
                 
@@ -821,7 +1230,9 @@ SEXP cPilliat_test_calibrate(SEXP nI, SEXP pI,SEXP NI, SEXP tolnI,
 
     for (int k = 0; k < N; ++k)
     {
-        
+        if(debug){
+            Rprintf("ITER %d\n", k);
+        }
         // generate X
         memset(cumsums, 0, p*sizeof(double));
 

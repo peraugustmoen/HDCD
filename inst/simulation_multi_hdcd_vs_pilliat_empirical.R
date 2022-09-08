@@ -43,7 +43,7 @@ tol = 1/Ncal
 #ns = c(100,200,500,2000)
 ns = c(100,200)
 #ps = c(50,100,500,1000,4000)
-ps = c(50,100,500)
+ps = c(50,100,500,5000)
 #ps = ns[]
 
 
@@ -214,7 +214,7 @@ config = function(i,n,p){
 
 cl <- makeCluster(num_cores,type="SOCK")
 registerDoSNOW(cl)
-pb <- txtProgressBar(max = N, style = 3)
+pb <- txtProgressBar(max = ((length(ns)*length(ps))), style = 3)
 progress <- function(n) setTxtProgressBar(pb, n)
 opts <- list(progress = progress)
 calibrates = foreach(z = 0:((length(ns)*length(ps))-1),.options.snow = opts) %dopar% {
@@ -223,17 +223,18 @@ calibrates = foreach(z = 0:((length(ns)*length(ps))-1),.options.snow = opts) %do
   rez = list()
   nind = floor(z/length(ps))+1
   pind = z%%length(ps)+1
-  cc = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,debug=FALSE)
-  cc2 = HDCD_modified_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,debug=FALSE)
-  cc3 = HDCD_modified_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=2, fast=TRUE,debug=FALSE)
+  cc = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=2,fast = TRUE,debug=FALSE)
+  cc2 = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,debug=FALSE)
+  cc3 = Pilliat_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K = 2, debug=FALSE)
   rez[[1]] = cc[[1]]
   rez[[2]] = cc[[2]]
   rez[[3]] = cc2[[1]]
   rez[[4]] = cc2[[2]]
   rez[[5]] = cc3[[1]]
   rez[[6]] = cc3[[2]]
-  rez[[7]] = ns[nind]
-  rez[[8]] = ps[pind]
+  rez[[7]] = cc3[[3]]
+  rez[[8]] = ns[nind]
+  rez[[9]] = ps[pind]
   rez
   #calibrates[[z+1]] = rez
   
@@ -272,40 +273,40 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         rezi[["j"]] = j
         rezi[["y"]] = y
         
-        # hdcd_mod
+        # hdcd_fast
         xi = 4*sqrt(log(p*n))
         lambda = sqrt(log(p*log(n)))
         
         a = proc.time()
-        res  = HDCD_modified(X, 3,2.5, empirical = TRUE, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[4]], droppartialsum = FALSE, fast =FALSE,debug= FALSE)
+        res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
         b=proc.time()
-        rezi[["hdcd_mod_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["hdcd_mod_K"]]= res$changepointnumber
-        rezi[["hdcd_mod_chgpts"]]= res$changepoints
-        rezi[["hdcd_mod_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["hdcd_mod_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["hdcd_mod_ari"]] = ARI(etas, res$changepoints, n)
-        # hdcd_fast
-        
-        a = proc.time()
-        res  = HDCD_modified(X, 3,2.5, empirical = TRUE, fast = TRUE, K=2,thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[6]], droppartialsum = FALSE,debug= FALSE)
-        b=proc.time()
-        
         rezi[["hdcd_fast_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["hdcd_fast_K"]] = res$changepointnumber
+        rezi[["hdcd_fast_K"]]= res$changepointnumber
         rezi[["hdcd_fast_chgpts"]]= res$changepoints
         rezi[["hdcd_fast_hausd"]] = hausdorff(res$changepoints, etas,n)
         rezi[["hdcd_fast_K_error"]] = length(res$changepoints) - length(etas)
         rezi[["hdcd_fast_ari"]] = ARI(etas, res$changepoints, n)
+        # hdcd
+        
+        a = proc.time()
+        res  = HDCD (X, 2,2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[4]] , droppartialsum = FALSE, fast =FALSE,debug= FALSE)
+        b=proc.time()
+        
+        rezi[["hdcd_time"]] = (b-a)[1]+(b-a)[2]
+        rezi[["hdcd_K"]] = res$changepointnumber
+        rezi[["hdcd_chgpts"]]= res$changepoints
+        rezi[["hdcd_hausd"]] = hausdorff(res$changepoints, etas,n)
+        rezi[["hdcd_K_error"]] = length(res$changepoints) - length(etas)
+        rezi[["hdcd_ari"]] = ARI(etas, res$changepoints, n)
         
         # hdcd slow
         # if(dim(X)[2]>500){
-        #   rezi[["hdcd_slow_time"]] = NA
-        #   rezi[["hdcd_slow_K"]] = NA
-        #   rezi[["hdcd_slow_chgpts"]]= NA
-        #   rezi[["hdcd_slow_hausd"]] = NA
-        #   rezi[["hdcd_slow_K_error"]] = NA
-        #   rezi[["hdcd_slow_ari"]] = NA
+        #   rezi[["pilliat_time"]] = NA
+        #   rezi[["pilliat_K"]] = NA
+        #   rezi[["pilliat_chgpts"]]= NA
+        #   rezi[["pilliat_hausd"]] = NA
+        #   rezi[["pilliat_K_error"]] = NA
+        #   rezi[["pilliat_ari"]] = NA
         # }
         # else{
         #a = proc.time()
@@ -314,17 +315,19 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         #b=proc.time()
         
         a = proc.time()
-        res  = HDCD (X, 2,2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =FALSE,debug= FALSE)
+        res  = Pilliat(X, 
+                       K = 2, alpha = 1+1/6, empirical = TRUE, threshold_dense = (calibrates[[j+(i-1)*length(ps)]])[[6]], 
+                       thresholds_partial = (calibrates[[j+(i-1)*length(ps)]])[[5]], thresholds_bj = (calibrates[[j+(i-1)*length(ps)]])[[7]],debug =FALSE)
         b=proc.time()
         print(res)
-
-        rezi[["hdcd_slow_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["hdcd_slow_K"]] = res$changepointnumber
-        rezi[["hdcd_slow_chgpts"]]= res$changepoints
-        rezi[["hdcd_slow_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["hdcd_slow_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["hdcd_slow_ari"]] = ARI(etas, res$changepoints, n)  
-      #}
+        
+        rezi[["pilliat_time"]] = (b-a)[1]+(b-a)[2]
+        rezi[["pilliat_K"]] = res$changepointnumber
+        rezi[["pilliat_chgpts"]]= res$changepoints
+        rezi[["pilliat_hausd"]] = hausdorff(res$changepoints, etas,n)
+        rezi[["pilliat_K_error"]] = length(res$changepoints) - length(etas)
+        rezi[["pilliat_ari"]] = ARI(etas, res$changepoints, n)  
+        #}
         
         rezi[["hehe"]] = res
         rezi[["true_K"]] = length(etas)
@@ -348,24 +351,24 @@ close(pb)
 stopCluster(cl) 
 
 {
-  hdcd_mod_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_mod_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_mod_time = array(0, dim= c(length(ns), length(ps), numconfig))
-  hdcd_mod_ari = array(0, dim= c(length(ns), length(ps), numconfig))
-  
   hdcd_fast_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
   hdcd_fast_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
   hdcd_fast_time = array(0, dim= c(length(ns), length(ps), numconfig))
   hdcd_fast_ari = array(0, dim= c(length(ns), length(ps), numconfig))
   
-  hdcd_slow_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_slow_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_slow_time = array(0, dim= c(length(ns), length(ps), numconfig))
-  hdcd_slow_ari = array(0, dim= c(length(ns), length(ps), numconfig))
+  hdcd_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
+  hdcd_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
+  hdcd_time = array(0, dim= c(length(ns), length(ps), numconfig))
+  hdcd_ari = array(0, dim= c(length(ns), length(ps), numconfig))
   
-  hdcd_slow_hausd[,,1] = NA
-  hdcd_mod_hausd[,,1] = NA
+  pilliat_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
+  pilliat_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
+  pilliat_time = array(0, dim= c(length(ns), length(ps), numconfig))
+  pilliat_ari = array(0, dim= c(length(ns), length(ps), numconfig))
+  
+  pilliat_hausd[,,1] = NA
   hdcd_fast_hausd[,,1] = NA
+  hdcd_hausd[,,1] = NA
   
   for (z in 1:N) {
     list = result[[z]]
@@ -377,26 +380,26 @@ stopCluster(cl)
       i = sublist[["i"]]
       j = sublist[["j"]]
       
-      hdcd_mod_Kerr[i,j,y] = hdcd_mod_Kerr[i,j,y] + sublist[["hdcd_mod_K_error"]]/N
-      hdcd_slow_Kerr[i,j,y] = hdcd_slow_Kerr[i,j,y] + sublist[["hdcd_slow_K_error"]]/N
       hdcd_fast_Kerr[i,j,y] = hdcd_fast_Kerr[i,j,y] + sublist[["hdcd_fast_K_error"]]/N
+      pilliat_Kerr[i,j,y] = pilliat_Kerr[i,j,y] + sublist[["pilliat_K_error"]]/N
+      hdcd_Kerr[i,j,y] = hdcd_Kerr[i,j,y] + sublist[["hdcd_K_error"]]/N
       
-      hdcd_mod_time[i,j,y] = hdcd_mod_time[i,j,y] + sublist[["hdcd_mod_time"]]/N
-      hdcd_slow_time[i,j,y] = hdcd_slow_time[i,j,y] + sublist[["hdcd_slow_time"]]/N
       hdcd_fast_time[i,j,y] = hdcd_fast_time[i,j,y] + sublist[["hdcd_fast_time"]]/N
+      pilliat_time[i,j,y] = pilliat_time[i,j,y] + sublist[["pilliat_time"]]/N
+      hdcd_time[i,j,y] = hdcd_time[i,j,y] + sublist[["hdcd_time"]]/N
       
-      hdcd_mod_ari[i,j,y] = hdcd_mod_ari[i,j,y] + sublist[["hdcd_mod_ari"]]/N
-      hdcd_slow_ari[i,j,y] = hdcd_slow_ari[i,j,y] + sublist[["hdcd_slow_ari"]]/N
       hdcd_fast_ari[i,j,y] = hdcd_fast_ari[i,j,y] + sublist[["hdcd_fast_ari"]]/N
+      pilliat_ari[i,j,y] = pilliat_ari[i,j,y] + sublist[["pilliat_ari"]]/N
+      hdcd_ari[i,j,y] = hdcd_ari[i,j,y] + sublist[["hdcd_ari"]]/N
       
       # if(i==1 & j ==1 & y==1){
-      #   print(sublist[["hdcd_fast_ari"]])
+      #   print(sublist[["hdcd_ari"]])
       # }
       
       if(y!= 1){
-        hdcd_mod_hausd[i,j,y] = hdcd_mod_hausd[i,j,y] + sublist[["hdcd_mod_hausd"]]/N
-        hdcd_slow_hausd[i,j,y] = hdcd_slow_hausd[i,j,y] + sublist[["hdcd_slow_hausd"]]/N
         hdcd_fast_hausd[i,j,y] = hdcd_fast_hausd[i,j,y] + sublist[["hdcd_fast_hausd"]]/N
+        pilliat_hausd[i,j,y] = pilliat_hausd[i,j,y] + sublist[["pilliat_hausd"]]/N
+        hdcd_hausd[i,j,y] = hdcd_hausd[i,j,y] + sublist[["hdcd_hausd"]]/N
       }
       
       
@@ -410,20 +413,20 @@ stopCluster(cl)
 
 if(save){
   saveRDS(result, file=sprintf("%s/result.RDA", savedir))
-  saveRDS(hdcd_mod_hausd, file=sprintf("%s/hdcd_mod_haus.RDA", savedir))
-  saveRDS(hdcd_mod_time, file=sprintf("%s/hdcd_mod_time.RDA", savedir))
-  saveRDS(hdcd_mod_Kerr, file=sprintf("%s/hdcd_mod_Kerr.RDA", savedir))
-  saveRDS(hdcd_mod_ari, file=sprintf("%s/hdcd_mod_ari.RDA", savedir))
-  
   saveRDS(hdcd_fast_hausd, file=sprintf("%s/hdcd_fast_haus.RDA", savedir))
   saveRDS(hdcd_fast_time, file=sprintf("%s/hdcd_fast_time.RDA", savedir))
   saveRDS(hdcd_fast_Kerr, file=sprintf("%s/hdcd_fast_Kerr.RDA", savedir))
   saveRDS(hdcd_fast_ari, file=sprintf("%s/hdcd_fast_ari.RDA", savedir))
   
-  saveRDS(hdcd_slow_hausd, file=sprintf("%s/hdcd_slow_haus.RDA", savedir))
-  saveRDS(hdcd_slow_time, file=sprintf("%s/hdcd_slow_time.RDA", savedir))
-  saveRDS(hdcd_slow_Kerr, file=sprintf("%s/hdcd_slow_Kerr.RDA", savedir))
-  saveRDS(hdcd_slow_ari, file=sprintf("%s/hdcd_slow_ari.RDA", savedir))
+  saveRDS(hdcd_hausd, file=sprintf("%s/hdcd_haus.RDA", savedir))
+  saveRDS(hdcd_time, file=sprintf("%s/hdcd_time.RDA", savedir))
+  saveRDS(hdcd_Kerr, file=sprintf("%s/hdcd_Kerr.RDA", savedir))
+  saveRDS(hdcd_ari, file=sprintf("%s/hdcd_ari.RDA", savedir))
+  
+  saveRDS(pilliat_hausd, file=sprintf("%s/pilliat_haus.RDA", savedir))
+  saveRDS(pilliat_time, file=sprintf("%s/pilliat_time.RDA", savedir))
+  saveRDS(pilliat_Kerr, file=sprintf("%s/pilliat_Kerr.RDA", savedir))
+  saveRDS(pilliat_ari, file=sprintf("%s/pilliat_ari.RDA", savedir))
   
   
   infofile<-file(sprintf("%s/parameters.txt", savedir))
@@ -447,7 +450,7 @@ if(save){
                  "\\begin{tabular}{@{\\extracolsep{1pt}} cccc|ccc|ccc|ccc|ccc}",
                  "\\hline", 
                  "\\multicolumn{4}{c|}{Parameters} & \\multicolumn{3}{c|}{Hausdorff distance} &\\multicolumn{3}{c|}{$\\widehat{K}-K$} &\\multicolumn{3}{c|}{ARI} &\\multicolumn{3}{c}{Time in miliseconds} \\\\ \\hline ",
-                 "$n$ & $p$ & Sparsity & K & \\text{HDCD fast} & \\text{hdcd mod} & \\text{HDCD}& \\text{HDCD fast} & \\text{hdcd mod} & \\text{HDCD} & \\text{HDCD fast} & \\text{hdcd mod} & \\text{HDCD}  & \\text{HDCD fast} & \\text{hdcd mod} & \\text{HDCD} \\\\", 
+                 "$n$ & $p$ & Sparsity & K & \\text{HDCD} & \\text{HDCD fast} & \\text{Pilliat}& \\text{HDCD} & \\text{HDCD fast} & \\text{Pilliat} & \\text{HDCD} & \\text{HDCD fast} & \\text{Pilliat}  & \\text{HDCD} & \\text{HDCD fast} & \\text{Pilliat} \\\\", 
                  "\\hline \\")
   
   
@@ -477,9 +480,9 @@ if(save){
         string = sprintf("%d & %d & %s & %d ", n, p, sparsity, length(etas))
         
         
-        res = round(c(hdcd_fast_hausd[i,j,y],hdcd_mod_hausd[i,j,y], hdcd_slow_hausd[i,j,y]),digits=3)
+        res = round(c(hdcd_hausd[i,j,y],hdcd_fast_hausd[i,j,y], pilliat_hausd[i,j,y]),digits=3)
         minind = (res==min(na.omit(res)))
-        res = c(hdcd_fast_hausd[i,j,y],hdcd_mod_hausd[i,j,y], hdcd_slow_hausd[i,j,y])
+        res = c(hdcd_hausd[i,j,y],hdcd_fast_hausd[i,j,y], pilliat_hausd[i,j,y])
         
         for (t in 1:length(res)) {
           if(is.na(res[t])){
@@ -492,9 +495,9 @@ if(save){
           }
         }
         
-        res = round(c(hdcd_fast_Kerr[i,j,y],hdcd_mod_Kerr[i,j,y], hdcd_slow_Kerr[i,j,y]),digits=3)
+        res = round(c(hdcd_Kerr[i,j,y],hdcd_fast_Kerr[i,j,y], pilliat_Kerr[i,j,y]),digits=3)
         minind = (abs(res)==min(abs(res)))
-        res = c(hdcd_fast_Kerr[i,j,y],hdcd_mod_Kerr[i,j,y], hdcd_slow_Kerr[i,j,y])
+        res = c(hdcd_Kerr[i,j,y],hdcd_fast_Kerr[i,j,y], pilliat_Kerr[i,j,y])
         
         for (t in 1:length(res)) {
           if(minind[t]){
@@ -504,9 +507,9 @@ if(save){
           }
         }
         
-        res = round(c(hdcd_fast_ari[i,j,y],hdcd_mod_ari[i,j,y], hdcd_slow_ari[i,j,y]),digits=3)
+        res = round(c(hdcd_ari[i,j,y],hdcd_fast_ari[i,j,y], pilliat_ari[i,j,y]),digits=3)
         minind = (abs(res)==max(abs(res)))
-        res = c(hdcd_fast_ari[i,j,y],hdcd_mod_ari[i,j,y], hdcd_slow_ari[i,j,y])
+        res = c(hdcd_ari[i,j,y],hdcd_fast_ari[i,j,y], pilliat_ari[i,j,y])
         for (t in 1:length(res)) {
           if(minind[t]){
             string = sprintf("%s & \\textbf{%.3f} ", string, res[t])
@@ -516,9 +519,9 @@ if(save){
         }
         
         
-        res = round(1000*c(hdcd_fast_time[i,j,y],hdcd_mod_time[i,j,y], hdcd_slow_time[i,j,y]),digits=3)
+        res = round(1000*c(hdcd_time[i,j,y],hdcd_fast_time[i,j,y], pilliat_time[i,j,y]),digits=3)
         minind = (res==min(res))
-        res = 1000*c(hdcd_fast_time[i,j,y],hdcd_mod_time[i,j,y], hdcd_slow_time[i,j,y])
+        res = 1000*c(hdcd_time[i,j,y],hdcd_fast_time[i,j,y], pilliat_time[i,j,y])
         
         for (t in 1:length(res)) {
           if(minind[t]){
