@@ -3,12 +3,13 @@
 #' @export
 Pilliat = function(X, threshold_d_const=4, threshold_bj_const=6, threshold_partial_const=4,
                   K = 2, alpha = 1+1/6, empirical = FALSE, threshold_dense = NULL, 
-                  thresholds_partial = NULL, thresholds_bj = NULL, N = 100, tol = 0.05, debug =FALSE){
+                  thresholds_partial = NULL, thresholds_bj = NULL, N = 100, tol = 0.05, 
+                  rescale_variance = TRUE, debug =FALSE){
   p = dim(X)[1]
   n = dim(X)[2]
   
-  lens = c(2)
-  last = 2
+  lens = c(1)
+  last = 1
   tmp = last
   while(alpha*last<n){
     #while(2*last<n){
@@ -24,7 +25,8 @@ Pilliat = function(X, threshold_d_const=4, threshold_bj_const=6, threshold_parti
   if(empirical){
     if(is.null(thresholds_partial) || is.null(threshold_dense) || is.null(thresholds_bj)){
       res = Pilliat_calibrate(n,p, N=N, tol=tol,threshold_bj_const=threshold_bj_const,
-                                   K = K, alpha = alpha,maxx = maxx, lens = lens, debug=debug)
+                                   K = K, alpha = alpha,maxx = maxx, lens = lens, rescale_variance = 
+                                rescale_variance, debug=debug)
       thresholds_partial = res$thresholds_partial
       thresholds_bj = res$thresholds_bj
       threshold_dense = res$threshold_dense
@@ -85,12 +87,13 @@ Pilliat = function(X, threshold_d_const=4, threshold_bj_const=6, threshold_parti
   #res = .Call(cPilliat, X,as.integer(n), as.integer(p), thresholds,thresholds_test,
    #           as.integer(lens),as.integer(length(lens)), as.integer(K), as,nu_as, 
     #          as.integer(length(as)), as.integer(twologn), as.integer(ts),as.integer(debug))
-  res = .Call(cPilliat, X, as.integer(n), as.integer(p), as.numeric(thresholds_partial), 
+  res = .Call(cPilliat, X[,], as.integer(n), as.integer(p), as.numeric(thresholds_partial), 
         as.numeric(threshold_dense), as.integer( thresholds_bj),
-        as.integer(lens), as.integer(length(lens)), as.integer(K), as.integer(maxx),as.integer(debug))
+        as.integer(lens), as.integer(length(lens)), as.integer(K), as.integer(maxx),
+        as.integer(rescale_variance), as.integer(debug))
   
   if(res$number_of_changepoints==0){
-    return(NULL)
+    return(list(scales = res$scales))
   }
   
   
@@ -108,7 +111,8 @@ Pilliat = function(X, threshold_d_const=4, threshold_bj_const=6, threshold_parti
 }
 #' @export
 Pilliat_calibrate = function(n,p, N=100, tol=0.05,threshold_bj_const=6,
-                                              K = 2, alpha = 1+1/6,maxx = NULL, lens = NULL, debug=FALSE){
+                                              K = 2, alpha = 1+1/6,maxx = NULL, lens = NULL, 
+                             rescale_variance = TRUE, debug=FALSE){
   
   log2p = floor(log(p,base=2))+1
   if(is.null(lens) || is.null(maxx)){
@@ -154,7 +158,8 @@ Pilliat_calibrate = function(n,p, N=100, tol=0.05,threshold_bj_const=6,
 
   res= .Call(cPilliat_calibrate, as.integer(n), as.integer(p), as.integer(N), 
              as.integer(toln), as.integer(lens), as.integer(length(lens)), 
-             as.integer(K), as.integer(maxx), as.integer(log2p),as.integer(debug))
+             as.integer(K), as.integer(maxx), as.integer(log2p),
+             as.integer(rescale_variance), as.integer(debug))
   #res[["as"]] = as
   #res[["nu_as"]] = nu_as
   return(res)

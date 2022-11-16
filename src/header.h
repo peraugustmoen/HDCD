@@ -13,7 +13,9 @@
 #include <string.h>
 #include <float.h>
 
-#define NEGINF -(FLT_MAX -10.0)
+//#define NEGINF -(FLT_MAX -10.0)
+#define NEGINF -100000000.0
+#define MADCONST 1.482602
 
 void internal_matmult(double *,
                       double *,
@@ -34,6 +36,8 @@ double * internal_power_method(double *, int, double,
 
 void CUSUM(double *,double * , int , int , int );
 void singleCUSUM(double *, double *, int , int , int , int);
+
+void rescale_variance(double *, double* , int, int, double *);
 
 // Sorting
     

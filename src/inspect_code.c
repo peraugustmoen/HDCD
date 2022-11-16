@@ -210,7 +210,7 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
         Rprintf("cInspectCall! s=%d, e=%d\n", s, e);
     }
 
-    if(e-s<lens[0]){
+    if(e-s<2*lens[0]){
         //Rprintf("segment too short\n");
         return;
     }
@@ -240,7 +240,7 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
             jump = 1;
         }
 
-        if(e-s<len){
+        if(e-s<2*len){
             break;
         }
 
@@ -248,7 +248,7 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
         {
             i = segstarts[cord_spec(k,j,n)];
 
-            if(i>e-len || i<-1){
+            if(i>e-2*len || i<-1){
                 break;
             }
             else if (i<s)
@@ -265,7 +265,7 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
                 //inspectOnSegment(cumsums, cusum, &tmpargmax, &tmpmaximum, s, e, p, lambda,
                  //   eps, maxiter, projvec, cusum_proj);
                  //double * cumsums, double * cusum, int * maxpos, double * maximum,
-                 internal_inspectOnSegment(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxcusums[cord_spec(k,j,n)]), i, i+len, p,
+                 internal_inspectOnSegment(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxcusums[cord_spec(k,j,n)]), i, i+2*len, p,
                  lambda,
                         eps, maxiter, mhat, mhatprod, v, v2,debug);
             }
@@ -298,7 +298,7 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
         i = segstarts[cord_spec(k_max,j_max,n)];
         len = lens[j_max];
         int ss = i;
-        int ee = i+len;
+        int ee = i+2*len;
         CUSUM(cumsums, cusum, ss, ee, p);
         double * projvec = internal_sparse_svd(cusum, p, ee-ss-1, lambda, eps, maxiter,
                         mhat, mhatprod, v, v2,debug);
@@ -332,7 +332,7 @@ void cInspect_call(double * x, int s, int e, int n, int p, int depth, int* chang
 }
 
 SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP KI,
-    SEXP epsI, SEXP lambdaI, SEXP maxiterI, SEXP debugI){
+    SEXP epsI, SEXP lambdaI, SEXP maxiterI, SEXP rescale_variance_boolI, SEXP debugI){
     // X : p \times n
     PROTECT(XI);
     PROTECT(lensI);
@@ -344,6 +344,7 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
     PROTECT(epsI);
     PROTECT(lambdaI);
     PROTECT(maxiterI);
+    PROTECT(rescale_variance_boolI);
     PROTECT(debugI);
 
     double * X = REAL(XI);
@@ -357,6 +358,7 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
     double lambda = *REAL(lambdaI);
     int maxiter = *INTEGER(maxiterI);
     int debug = *INTEGER(debugI);
+    int rescale_variance_bool = *INTEGER(rescale_variance_boolI);
     if(debug){
       Rprintf("p = %d\n", p);
       Rprintf("lambda = %f\n", lambda);
@@ -379,18 +381,7 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
     // first we compute all the cumulative sums of all
     // coordinates:
 
-    SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
-    double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
-    memset(cumsums, 0, p*(n+1)*sizeof(double));
-
-    for (int j = 1; j <=n; ++j)
-    {
-        for (int i = 0; i < p; ++i)
-        {
-            //#define cord_spec(r,c, D) ((r) + (D)*(c))
-            cumsums[cord_spec(i,j,p)] = X[cord_spec(i,j-1, p)] +cumsums[cord_spec(i,j-1, p)];
-        }
-    }
+    
 
     SEXP cusumSEXP = PROTECT(allocVector(REALSXP, p*(n)));
     double * cusum = REAL(cusumSEXP);
@@ -415,6 +406,31 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
     double * mhatprod = REAL(mhatprodSEXP);
     memset(mhatprod, 0, sizeof(double)*minlen*minlen);
 
+    SEXP scalesSEXP = PROTECT(allocVector(REALSXP, p));
+    double * scales = REAL(scalesSEXP);
+    for (int i = 0; i < p; ++i)
+    {
+        scales[i] = 1;
+    }
+
+
+    if (rescale_variance_bool)
+    {
+        rescale_variance(X, scales, n, p, v);
+    }
+
+    SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
+    double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
+    memset(cumsums, 0, p*(n+1)*sizeof(double));
+
+    for (int j = 1; j <=n; ++j)
+    {
+        for (int i = 0; i < p; ++i)
+        {
+            //#define cord_spec(r,c, D) ((r) + (D)*(c))
+            cumsums[cord_spec(i,j,p)] = X[cord_spec(i,j-1, p)] +cumsums[cord_spec(i,j-1, p)];
+        }
+    }
 
 
     // record all segment starts
@@ -445,7 +461,7 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
             jump=1;
         }
 
-        for (int i = -1; i < (n-len); i+=jump)
+        for (int i = -1; i < (n-2*len); i+=jump)
         {
             //cord_spec(r,c, D) ((r) + (D)*(c))
             //compute_cusum(cumsum, i, i+len, &(maxpos[cord_spec(i,j,n)]), &(maxcusums[cord_spec(i,j,n)]));
@@ -470,25 +486,27 @@ SEXP cInspect(SEXP XI,SEXP nI, SEXP pI,SEXP xiI, SEXP lensI,SEXP lenLensI,SEXP K
     int * changepointnum = INTEGER(changepointnumSEXP);
     *changepointnum = changepoint_counter;
 
-    SEXP ret = PROTECT(allocVector(VECSXP, 5)); //the list to be returned in R
+    SEXP ret = PROTECT(allocVector(VECSXP, 6)); //the list to be returned in R
     SET_VECTOR_ELT(ret, 0, out);
     SET_VECTOR_ELT(ret, 1, maxvalSEXP);
     SET_VECTOR_ELT(ret, 2, depthcounterSEXP);
     SET_VECTOR_ELT(ret, 3, coordschgSEXP);
     SET_VECTOR_ELT(ret, 4, changepointnumSEXP);
+    SET_VECTOR_ELT(ret, 5, scalesSEXP);
 
     // creating list of names/titles to be returned in the output list
-    SEXP names = PROTECT(allocVector(STRSXP, 5));
+    SEXP names = PROTECT(allocVector(STRSXP, 6));
     //SET_STRING_ELT(names, 0, mkChar("CUSUM"));
     SET_STRING_ELT(names, 0, mkChar("changepoints"));
     SET_STRING_ELT(names, 1, mkChar("CUSUMval"));
     SET_STRING_ELT(names, 2, mkChar("depth"));
     SET_STRING_ELT(names, 3, mkChar("coordinate"));
     SET_STRING_ELT(names, 4, mkChar("changepointnumber"));
+    SET_STRING_ELT(names, 5, mkChar("scales"));
 
     setAttrib(ret, R_NamesSymbol, names);
 
-    UNPROTECT(27);
+    UNPROTECT(29);
     return ret;
 }
 
@@ -587,5 +605,253 @@ SEXP cInspect_single(SEXP XI,SEXP nI, SEXP pI,SEXP xiI,
     UNPROTECT(10);
     return ret;
 }
+
+
+
+
+
+
+SEXP cInspect_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLensI,SEXP KI, SEXP lambdaI,
+                        SEXP epsI,SEXP maxiterI, SEXP rescale_variance_boolI, SEXP debugI){
+    // X : p \times n
+    PROTECT(lensI);
+    PROTECT(nI);
+    PROTECT(pI);
+    PROTECT(NI);
+    PROTECT(tolnI);
+    PROTECT(lenLensI);
+    PROTECT(KI);
+    PROTECT(debugI);
+    PROTECT(lambdaI);
+    PROTECT(maxiterI);
+    PROTECT(rescale_variance_boolI);
+    PROTECT(epsI);
+
+    int n = *(INTEGER(nI));
+    int p = *(INTEGER(pI));
+    int N = *(INTEGER(NI));
+    int toln = *(INTEGER(tolnI));
+    int *lens = INTEGER(lensI); /////// dobbeltsjekk at int er like stor som INTEGER!!!!!!!
+    int lenLens = *(INTEGER(lenLensI));
+    int K = *(INTEGER(KI));
+    double lambda = *(REAL(lambdaI));
+    int debug = *INTEGER(debugI);
+    int maxiter = *INTEGER(maxiterI);
+    int rescale_variance_bool = *INTEGER(rescale_variance_boolI);
+    double eps = *REAL(epsI);
+
+    if(debug){
+      Rprintf("p = %d\n", p);
+      Rprintf("n = %d\n", n);
+    }
+
+    // max val for each iter
+    SEXP maxvalsSEXP = PROTECT(allocVector(REALSXP, N));
+    double * maxvals = REAL(maxvalsSEXP);
+    //memset(maxvals1, 0, sizeof(double)*len_as*N);
+
+    
+
+    for (int i = 0; i < N; ++i)
+    {
+        maxvals[i] = NEGINF;
+    }
+
+
+
+    SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
+    double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
+    memset(cumsums, 0, p*(n+1)*sizeof(double));
+
+
+    SEXP cusumSEXP = PROTECT(allocVector(REALSXP, p*(n)));
+    double * cusum = REAL(cusumSEXP);
+    memset(cusum, 0, sizeof(double)*p*(n));
+    int maxlen = p;
+    int minlen = n;
+    if(n>p){
+        maxlen = n;
+        minlen = p;
+    }
+    SEXP vSEXP = PROTECT(allocVector(REALSXP, maxlen));
+    SEXP v2SEXP = PROTECT(allocVector(REALSXP, maxlen));
+    SEXP mhatSEXP = PROTECT(allocVector(REALSXP, p*n));
+    SEXP mhatprodSEXP = PROTECT(allocVector(REALSXP, minlen*minlen));
+
+    double * v = REAL(vSEXP);
+    memset(v, 0, sizeof(double)*maxlen);
+    double * v2 = REAL(v2SEXP);
+    memset(v2, 0, sizeof(double)*maxlen);
+    double * mhat = REAL(mhatSEXP);
+    memset(mhat, 0, sizeof(double)*p*n);
+    double * mhatprod = REAL(mhatprodSEXP);
+    memset(mhatprod, 0, sizeof(double)*minlen*minlen);
+
+    SEXP segstartsSEXP = PROTECT(allocVector(INTSXP, n*lenLens));
+    int * segstarts = INTEGER(segstartsSEXP);
+    //memset(segstarts, -2, sizeof(int)*n*lenLens);
+    for (size_t i = 0; i < n*lenLens; i++) {
+      segstarts[i] = -2;
+    }
+    int len;
+    int jump;
+    int counter = 0;
+
+    for (int j = 0; j < lenLens; ++j)
+    {
+        counter=0;
+
+        len = lens[j]; //len here is -1 of the len in text
+        jump = len/K;
+        if(jump<1){
+            jump=1;
+        }
+
+        for (int i = -1; i < (n-2*len); i+=jump)
+        {
+            //cord_spec(r,c, D) ((r) + (D)*(c))
+            //compute_cusum(cumsum, i, i+len, &(maxpos[cord_spec(i,j,n)]), &(maxvalues[cord_spec(i,j,n)]));
+            segstarts[cord_spec(counter++,j,n)] = i;
+            if(debug){
+                //Rprintf("segstarts[%d, %d] = %d\n",counter-1, j, i );
+            }
+
+
+        }
+    }
+
+    int s = -1;
+    int e = n-1;
+    int ss;
+    int ee;
+    int ll;
+    int hh;
+    int i;
+    int j;
+    int k;
+
+    double tmpmax = 0.0;
+    int pos = 0;
+
+    /*if(debug){
+        return NULL;
+    }*/
+    GetRNGstate();
+
+    SEXP XSEXP = PROTECT(allocVector(REALSXP, p * (n)));
+    double *X = REAL(XSEXP); // p \times (n+1). first col is 0
+    memset(X, 0, p*(n)*sizeof(double));
+
+    for (k = 0; k < N; ++k)
+    {
+
+        // generate X
+
+        for (i = 0; i < p; ++i)
+        {
+            for (j = 0; j < n; ++j)
+            {
+                X[cord_spec(i,j,p)] = rnorm(0.0, 1.0);
+            }
+        }
+
+        // normalize / rescale variance
+        if (rescale_variance_bool)
+        {
+            rescale_variance(X, NULL, n, p, v);
+        }
+        
+        memset(cumsums, 0, p*sizeof(double));
+
+        for (i = 0; i < p; ++i)
+        {
+            for (j = 0; j < n; ++j)
+            {
+                cumsums[cord_spec(i,j+1,p)] = X[cord_spec(i,j,p)] +cumsums[cord_spec(i,j, p)];
+            }
+        }
+
+
+        for ( ll = 0; ll < lenLens; ++ll)
+        {
+            len = lens[ll];
+            if(debug){
+                Rprintf("ll=%d, len = %d\n", ll, len);
+            }
+
+
+
+            if(e-s<2*len){
+                break;
+            }
+
+            for (hh = 0; hh < n; ++hh)
+            {
+                ss = segstarts[cord_spec(hh,ll,n)];
+                ee = ss+2*len;
+                if(debug){
+                    Rprintf("i= %d\n", hh);
+                }
+                if( ee >n || ss<-1){
+                    if(debug){
+                        Rprintf("i= %d is shhipped\n", hh);
+                    }
+                    break;
+                }
+
+
+
+
+
+                internal_inspectOnSegment(cumsums, cusum, &pos, &tmpmax, ss, ee, p, lambda,
+                    eps, maxiter, mhat, mhatprod, v, v2, debug);
+
+                if(tmpmax >maxvals[k]){
+                    maxvals[k] = tmpmax;
+                }
+                
+            }
+        }
+    }
+
+
+
+    PutRNGstate();
+    SEXP thresholdSEXP = PROTECT(allocVector(REALSXP, 1 ));
+    double * threshold = REAL(thresholdSEXP);
+
+        sort_k_largest(maxvals , toln, 0, N);
+        *threshold = maxvals[cord_spec(toln-1, 0, N)];
+
+  
+
+    SEXP ret = PROTECT(allocVector(VECSXP, 1)); //the list to be returned in R
+    SET_VECTOR_ELT(ret, 0, thresholdSEXP);
+
+
+    // creating list of names/titles to be returned in the output list
+    SEXP names = PROTECT(allocVector(STRSXP, 1));
+    //SET_STRING_ELT(names, 0, mkChar("CUSUM"));
+    SET_STRING_ELT(names, 0, mkChar("max_value"));
+
+    setAttrib(ret, R_NamesSymbol, names);
+
+
+    UNPROTECT(24);
+    return(ret);
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
 
 

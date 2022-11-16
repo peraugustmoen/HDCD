@@ -543,7 +543,7 @@ SEXP cScan_single(SEXP XI,SEXP nI, SEXP pI, SEXP debugI, SEXP TsI){
     int * maxpos = INTEGER(maxposSEXP);
     int * maxs= INTEGER(maxsSEXP);
 
-    *maxpos = -10;
+    *maxpos = 0;
     double maximum = -1000000000000000000000.0;
     *maxs = 0;
     int s = -1;
@@ -574,7 +574,7 @@ SEXP cScan_single(SEXP XI,SEXP nI, SEXP pI, SEXP debugI, SEXP TsI){
     			}
     		}*/
     		cumsumm +=cusum[cord_spec((p-1)-i,j, p)];
-    		tmp = (cumsumm - (i+1))/sqrt(2*(i+1))-Ts[i];
+    		tmp = (cumsumm - (i+1))-Ts[i];
     		if(tmp>maximum){
     			maximum = tmp;
     			*maxpos = j;

@@ -1,14 +1,19 @@
 #' @useDynLib HDCD cHDCD
 #' @useDynLib HDCD cHDCD_calibrate
 #' @export
-HDCD = function(X, threshold_d=2, threshold_s=2, alpha = 1+1/6, K = 7, debug =FALSE,
+HDCD = function(X, threshold_d=1.5, threshold_s=1, alpha = 1+1/6, K = 7, debug =FALSE,
                 empirical = FALSE, thresholds_test = NULL,
-                threshold_d_test = threshold_d, threshold_s_test = threshold_s, droppartialsum = FALSE, fast = FALSE){
+                threshold_d_test = threshold_d, threshold_s_test = threshold_s, droppartialsum = FALSE, fast = FALSE,
+                rescale_variance = TRUE){
+  
+  ## FIX THE AUTOMATIC MONTE CARLO HERE. tol and N are missing
+  
+  
   p = dim(X)[1]
   n = dim(X)[2]
 
-  lens = c(2)
-  last = 2
+  lens = c(1)
+  last = 1
   tmp = last
   while(alpha*last<n){
     #while(2*last<n){
@@ -21,7 +26,7 @@ HDCD = function(X, threshold_d=2, threshold_s=2, alpha = 1+1/6, K = 7, debug =FA
     lens= c(lens, last)
   }
   
-  max_s = min(sqrt(4*p*log(n)), p)
+  max_s = min(sqrt(p*log(n)), p)
   log2ss = 0:floor(log(max_s, base=2))
   ss = 2^(log2ss)
   ss = c(p, rev(ss))
@@ -34,7 +39,7 @@ HDCD = function(X, threshold_d=2, threshold_s=2, alpha = 1+1/6, K = 7, debug =FA
   }
   
   ts = ss
-  twologn = min(p, floor(2*log(n)))
+  twologn = min(p, floor(log(n)/2))
   if(droppartialsum){
     twologn=0
   }
@@ -42,28 +47,28 @@ HDCD = function(X, threshold_d=2, threshold_s=2, alpha = 1+1/6, K = 7, debug =FA
   if(is.null(thresholds_test)){
     if(empirical){
       ttt = HDCD_calibrate(n,p, as, nu_as, ts, twologn, lens, K,
-                           alpha, K, N, tol,fast, debug)
+                           alpha, K, N, tol,fast, rescale_variance,debug)
       if(droppartialsum){
         thresholds_test = ttt[[1]]
       }else{
-        thresholds_test = ttt[2]
+        thresholds_test = ttt[[2]]
       }
     }
     else{
       thresholds_test = nu_as[] 
-      thresholds_test[2:length(ss)] = threshold_s_test*pmax(ss[2:length(ss)]*log(exp(1)*p*log(n^4)/ss[2:length(ss)]^2), log(n^4))
+      thresholds_test[2:length(ss)] = threshold_s_test*(ss[2:length(ss)]*log(exp(1)*p*log(n^4)/ss[2:length(ss)]^2)+ log(n^4))
       thresholds_test[1] = threshold_d_test* (sqrt(p*log(n^4)) + log(n^4))
     }
     
-    if(debug){
-      print(thresholds_test)
-    }
+    # if(debug){
+    #   print(thresholds_test)
+    # }
   }
   
 
   thresholds = nu_as[]
   
-  thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)*p*log(n^4)/ss[2:length(ss)]^2), log(n^4))
+  thresholds[2:length(ss)] = threshold_s*(ss[2:length(ss)]*log(exp(1)*4*p*log(n)/ss[2:length(ss)]^2)+ log(n^4))
   #thresholds[2:length(ss)] = threshold_s*pmax(ss[2:length(ss)]*log(exp(1)-1 + sqrt(p*log(n^4))/ss[2:length(ss)]), log(n^4))
   #thresholds[2:length(ss)] = threshold_s*(ss[2:length(ss)]*log(exp(1)-1 + sqrt(p*log(n^4))/ss[2:length(ss)])+ log(n^4))
   
@@ -82,8 +87,12 @@ HDCD = function(X, threshold_d=2, threshold_s=2, alpha = 1+1/6, K = 7, debug =FA
   #ts = ss[!ind]
 
   if(debug){
+    print("thresholds:")
     print(thresholds)
+    print("thresholds_test:")
     print(thresholds_test)
+    print("as:")
+    print(as)
   }
   if(!empirical && twologn != 0){
     tt = 1
@@ -102,13 +111,14 @@ HDCD = function(X, threshold_d=2, threshold_s=2, alpha = 1+1/6, K = 7, debug =FA
   #myInspect(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdI, SEXP adaptTreshI, SEXP lensI,SEXP lenLensI,SEXP KI,
   # SEXP epsI, SEXP lambdaI, SEXP maxiterI)
 
-  res = .Call(cHDCD, X,as.integer(n), as.integer(p), thresholds,thresholds_test,
+  res = .Call(cHDCD, X[,],as.integer(n), as.integer(p), thresholds,thresholds_test,
               as.integer(lens),as.integer(length(lens)), as.integer(K), as,nu_as, 
-              as.integer(length(as)), as.integer(twologn), as.integer(ts), as.integer(fast),as.integer(debug))
+              as.integer(length(as)), as.integer(twologn), as.integer(ts), as.integer(fast),as.integer(rescale_variance),
+              as.integer(debug))
   
   
   if(res$changepointnum==0){
-    return(NULL)
+    return(list(scales = res$scales))
   }
   
   
@@ -127,59 +137,127 @@ HDCD = function(X, threshold_d=2, threshold_s=2, alpha = 1+1/6, K = 7, debug =FA
   res$maxaposes = as.integer(res$maxaposes[srt_indices])
   res$s = as.integer(ss[res$maxaposes+1])
   res$thresholds = thresholds
+  res$thresholds_test = thresholds_test
   res$ts = ts
   
 
   return(res)
 }
 
+
 #' @export
-HDCD_calibrate = function(n,p, as=NULL, nu_as=NULL, ts=NULL, twologn=NULL, lens = NULL,
-                          alpha = 1+1/6, K = 7, N, tol, fast = FALSE,debug=FALSE){
-  if(is.null(as) || is.null(nu_as) || is.null(ts) || is.null(twologn) ||
-     is.null(lens)){
-    lens = c(2)
-    last = 2
+HDCD_calibrate = function(n,p, alpha = 1+1/6, K = 7, N, tol, fast = FALSE,rescale_variance = TRUE,
+                          droppartialsum = FALSE, debug=FALSE){
+  
+  p = dim(X)[1]
+  n = dim(X)[2]
+  
+  lens = c(1)
+  last = 1
+  tmp = last
+  while(alpha*last<n){
+    #while(2*last<n){
     tmp = last
-    while(alpha*last<n){
-      #while(2*last<n){
-      tmp = last
-      last = floor(alpha*last)
-      if(last==tmp){
-        last = last+1
-      }
-      #last = last+1
-      lens= c(lens, last)
+    last = floor(alpha*last)
+    if(last==tmp){
+      last = last+1
     }
-    max_s = min(sqrt(4*p*log(n)), p)
-    log2ss = 0:floor(log(max_s, base=2))
-    ss = 2^(log2ss)
-    ss = c(p, rev(ss))
-    as = ss[]
-    as[2:length(ss)] = sqrt(2*log(exp(1)*4*p*log(n)/ss[2:length(ss)]^2))
-    as[1] = 0
-    nu_as = 1 + as*exp(dnorm(as, log=TRUE)-pnorm(as, lower.tail = FALSE, log=TRUE))
-    twologn = min(p, floor(2*log(n)))
-    ts = ss[]
+    #last = last+1
+    lens= c(lens, last)
   }
+  
+  max_s = min(sqrt(p*log(n)), p)
+  log2ss = 0:floor(log(max_s, base=2))
+  ss = 2^(log2ss)
+  ss = c(p, rev(ss))
+  as = ss[]
+  as[2:length(ss)] = sqrt(2*log(exp(1)*p*4*log(n)/ss[2:length(ss)]^2))
+  as[1] = 0
+  nu_as = 1 + as*exp(dnorm(as, log=TRUE)-pnorm(as, lower.tail = FALSE, log=TRUE))
   if(debug){
-    print(n)
-    print(p)
-    print(N)
-    print(tol)
+    print(ss)
   }
+  
+  ts = ss
+  twologn = min(p, floor(log(n)/2))
+  if(droppartialsum){
+    twologn=0
+  }
+  
+  if(debug){
+    print("as:")
+    print(as)
+  }
+  
+  #print(twologn)
+  #lens[7]=round(log(n)^2)
+  #myInspect(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdI, SEXP adaptTreshI, SEXP lensI,SEXP lenLensI,SEXP KI,
+  # SEXP epsI, SEXP lambdaI, SEXP maxiterI)
   
   toln = max(round(N*tol),1)
   
- 
+  
   res= .Call(cHDCD_calibrate, as.integer(n), as.integer(p), as.integer(N),
              as.integer(toln), as.integer(lens), as.integer(length(lens)),
              as.integer(K), as.numeric(as), as.numeric(nu_as), as.integer(length(as)),
-             as.integer(twologn), as.integer(ts), as.integer(fast), as.integer(debug))
-
+             as.integer(twologn), as.integer(ts), as.integer(fast),
+             as.integer(rescale_variance),as.integer(debug))
+  
   return(res)
   #return(NULL)
 }
+
+#' 
+#' #'
+#' HDCD_calibrate = function(n,p, as=NULL, nu_as=NULL, ts=NULL, twologn=NULL, lens = NULL,
+#'                           alpha = 1+1/6, K = 7, N, tol, fast = FALSE,rescale_variance = TRUE,debug=FALSE){
+#'   if(is.null(as) || is.null(nu_as) || is.null(ts) || is.null(twologn) ||
+#'      is.null(lens)){
+#'     lens = c(1)
+#'     last = 1
+#'     tmp = last
+#'     while(alpha*last<n){
+#'       #while(2*last<n){
+#'       tmp = last
+#'       last = floor(alpha*last)
+#'       if(last==tmp){
+#'         last = last+1
+#'       }
+#'       #last = last+1
+#'       lens= c(lens, last)
+#'     }
+#'     max_s = min(sqrt(p*log(n)), p)
+#'     log2ss = 0:floor(log(max_s, base=2))
+#'     ss = 2^(log2ss)
+#'     ss = c(p, rev(ss))
+#'     as = ss[]
+#'     as[2:length(ss)] = sqrt(2*log(exp(1)*4*p*log(n)/ss[2:length(ss)]^2))
+#'     as[1] = 0
+#'     nu_as = 1 + as*exp(dnorm(as, log=TRUE)-pnorm(as, lower.tail = FALSE, log=TRUE))
+#'     twologn = min(p, floor(log(n)/2))
+#'     ts = ss[]
+#'   }
+#'   if(debug){
+#'     print(n)
+#'     print(p)
+#'     print(N)
+#'     print(tol)
+#'     print("as:")
+#'     print(as)
+#'   }
+#'   
+#'   toln = max(round(N*tol),1)
+#'   
+#'  
+#'   res= .Call(cHDCD_calibrate, as.integer(n), as.integer(p), as.integer(N),
+#'              as.integer(toln), as.integer(lens), as.integer(length(lens)),
+#'              as.integer(K), as.numeric(as), as.numeric(nu_as), as.integer(length(as)),
+#'              as.integer(twologn), as.integer(ts), as.integer(fast),
+#'              as.integer(rescale_variance),as.integer(debug))
+#' 
+#'   return(res)
+#'   #return(NULL)
+#' }
 
 
 
@@ -209,7 +287,7 @@ HDCD_modified = function(X, threshold_d=2, threshold_s=2, alpha = 1+1/6, K = 7, 
   ss = 2^(log2ss)
   ss = c(p, rev(ss))
   as = ss[]
-  as[2:length(ss)] = sqrt(2*log(exp(1)*p*log(n)/ss[2:length(ss)]^2))
+  as[2:length(ss)] = 2*sqrt(log(exp(1)*p*log(n)/ss[2:length(ss)]^2))
   as[1] = 0
   nu_as = 1 + as*exp(dnorm(as, log=TRUE)-pnorm(as, lower.tail = FALSE, log=TRUE))
   if(debug){
@@ -418,3 +496,14 @@ HDCD_modified_calibrate = function(n,p, as=NULL, nu_as=NULL, ts=NULL, twologn=NU
 #   
 #   return(res)
 # }
+
+#' @export
+rescale.variance <- function(x){
+  p <- dim(x)[1]
+  n <- dim(x)[2]
+  for (j in 1:p){
+    scale <- mad(diff(x[j,]))/sqrt(2)
+    x[j,] <- x[j,] / scale
+  }
+  return(x)
+}

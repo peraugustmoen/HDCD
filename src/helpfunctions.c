@@ -222,7 +222,7 @@ double * internal_power_method(double * A, int n, double eps, int maxiter, doubl
 
     }
     if(i==(maxiter-1)){
-        printf("WARNING: power method did not converge");
+        Rprintf("WARNING: power method did not converge");
     }
     if (debug) {
         printf("num iter: %d\n", i);
@@ -358,5 +358,63 @@ SEXP CUSUM_R(SEXP XI, SEXP sI, SEXP eI, SEXP pI, SEXP nI){
     CUSUM(cumsums, cusum, s, e, p);
     UNPROTECT(3);
     return(cusumSEXP);
+}
+
+void rescale_variance(double * X, double * scales, int n, int p, double * vec){
+
+    double median= 0;
+    double scale = 0;
+    for (int j = 0; j < p; ++j)
+    {
+        // for each series
+
+        median = 0;
+
+        // compute mean of series j:
+        for (int i = 0; i < n-1; ++i)
+        {
+            vec[i] = X[cord_spec(j,i+1, p)] - X[cord_spec(j,i, p)];
+        }
+
+        // compute median
+        R_rsort(vec,n-1);
+
+        if((n-1) % 2 ==0){
+            median  = (vec[(n-1)/2] + vec[(n-1)/2-1])/2;
+        }else{
+            median = vec[(n-1)/2];
+        }
+
+        // compute absolute deviations from median
+        for (int i = 0; i < n-1; ++i)
+        {
+            vec[i] = fabs(vec[i] - median);
+            
+        }
+
+        R_rsort(vec,n-1);
+
+        if((n-1) % 2 ==0){
+            scale  = MADCONST * (vec[(n-1)/2] + vec[(n-1)/2-1])/2;
+        }else{
+            scale = MADCONST * vec[(n-1)/2];
+        }
+        
+        scale = scale/sqrt(2);
+        // rescale
+
+        for (int i = 0; i < (n-1); ++i)
+        {
+            X[cord_spec(j,i, p)] = X[cord_spec(j,i, p)] / scale;
+        }
+
+        if(scales != NULL){
+            scales[j] = scale;
+        }
+
+        
+
+    }
+
 }
 

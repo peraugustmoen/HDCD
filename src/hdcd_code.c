@@ -69,7 +69,7 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
                             int fast, int debug){
     // require as[0] = 0
     if(debug){
-      Rprintf("checking segment (%d,%d]\n", s,e);
+      Rprintf("checking segment (%d,%d]. FAST = %d.\n", s,e, fast);
 
     }
 
@@ -82,10 +82,15 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
 
     int k = 0;
 
+
+
     //double prev_nu_a = as[0];
     //double a;
     //double nu_a;
     double tmp = 0;
+    double tmpmax = 0;
+    int tmppos = 0;
+    int tmpapos = 0;
     //double a_tmp=-100000;
     //int pos_a_tmp = 0;
     //double * val=0;
@@ -95,7 +100,7 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
     double tmp2 =0;
     int localdetected = 0;
     int end = 1;
-
+    int detected = 0;
     if(fast){
 
         k = (s+e)/2;
@@ -172,6 +177,9 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
         /*else if(debug){
             Rprintf("Checked pos k = %d in [%d, %d) and found NO chgpt", k, s, e);
         }*/
+        if(localdetected){
+            detected = 1;
+        }
 
         
         /*}else{
@@ -226,55 +234,67 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
 
         // check if T >0
         localdetected = 0;
-        for (int z = 0; z < len_as; ++z)
-        {
-            /*tmp = tmpvec[z] - thresholds[z];
-            if (tmp> *maximum)
-            {
-                *maximum= tmp;
-                *maxpos = s+j+1;
-                *maxa_pos = z;
-            }*/
-            tmp = tmpvec[z] - thresholds_test[z];
-            if(tmp>0 && ts[z] > twologn){
-                localdetected = 1;
-            }
+        if(fast){
+            localdetected=1;
         }
-
-        // if T<= 0, check if P >0:
-        if(twologn>0 && localdetected ==0){
-            sort_k_largest_abs(cusum + cord_spec(0,j,p) , twologn, 0, p);
-            //partial_quicksort(cusum + cord_spec(0,j,p) , p , twologn);
-            double cumsum = 0;
-            int prev = 0;
-
-            for (int z = (len_as-1); z >= 0; --z)
+        if(!fast){
+            for (int z = 0; z < len_as; ++z)
             {
-                if(ts[z] > twologn){
-                    break;
-                }
-     
-                if(z==(len_as-1)){
-                    prev = -1;
-                }
-                for (int hh = prev+1; hh < ts[z]; ++hh)
+                /*tmp = tmpvec[z] - thresholds[z];
+                if (tmp> *maximum)
                 {
-                    cumsum += cusum[cord_spec(hh,j,p)]*cusum[cord_spec(hh,j,p)];
-                }
-                prev = ts[z]-1;
-                tmp = cumsum;
-
-                if(tmp >thresholds_test[z]){
+                    *maximum= tmp;
+                    *maxpos = s+j+1;
+                    *maxa_pos = z;
+                }*/
+                tmp = tmpvec[z] - thresholds_test[z];
+                if(tmp>0 && ts[z] > twologn){
                     localdetected = 1;
                 }
             }
-        }
 
-        if (localdetected)
-        {
-            if(debug){
-                Rprintf("Checked pos k = %d in [%d, %d) and found chgpt", s+j+1, s, e);
+            // if T<= 0, check if P >0:
+            if(twologn>0 && localdetected ==0){
+                sort_k_largest_abs(cusum + cord_spec(0,j,p) , twologn, 0, p);
+                //partial_quicksort(cusum + cord_spec(0,j,p) , p , twologn);
+                double cumsum = 0;
+                int prev = 0;
+
+                for (int z = (len_as-1); z >= 0; --z)
+                {
+                    if(ts[z] > twologn){
+                        break;
+                    }
+         
+                    if(z==(len_as-1)){
+                        prev = -1;
+                    }
+                    for (int hh = prev+1; hh < ts[z]; ++hh)
+                    {
+                        cumsum += cusum[cord_spec(hh,j,p)]*cusum[cord_spec(hh,j,p)];
+                    }
+                    prev = ts[z]-1;
+                    tmp = cumsum;
+
+                    if(tmp >thresholds_test[z]){
+                        localdetected = 1;
+                    }
+                }
             }
+        }
+        if(localdetected){
+            detected=1;
+        }
+        //if (localdetected)
+        if (1)
+        {
+            if(debug && (!fast)){
+                Rprintf("Checked pos k = %d in [%d, %d) and found chgpt\n", s+j+1, s, e);
+            }else if(debug){
+                Rprintf("Computing S statistic in k = %d in [%d, %d)\n", s+j+1, s, e);
+            }
+            tmpmax = NEGINF;
+            tmpapos = 0;
             for (int z = 0; z < len_as; ++z)
             {
                 if(fabs(tmpvec[z])<1e-10){
@@ -283,6 +303,11 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
                 //tmp = tmpvec[z] - thresholds[z];
                 //if(tmpvec[z] > thresholds_test[z]){
                     tmp = tmpvec[z] - thresholds[z];
+                    if(tmp > tmpmax){
+                        tmpmax = tmp;
+                        tmpapos = z;
+
+                    }
                     if (tmp> *maximum)
                     {
                         *maximum= tmp;
@@ -291,6 +316,9 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
                     }
                 //}
                 
+            }
+            if(debug){
+                Rprintf("S stat = %f at apos %d\n", tmpmax, tmpapos);
             }
         }
 
@@ -350,6 +378,9 @@ void internal_check_segment(double * cumsums, double * cusum, int * maxpos, doub
 
     }*/
 
+    if(detected==0){
+        *maximum = NEGINF+1;
+    }
     if(debug){
       Rprintf("for segment (%d,%d] we found maximum in %d with val %f\n", s,e,*maxpos, *maximum);
     }
@@ -579,7 +610,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
         Rprintf("cHDCD_call! s=%d, e=%d\n", s, e);
     }
 
-    if(e-s<lens[0]){
+    if(e-s<2*lens[0]){
         //Rprintf("segment too short\n");
         return;
     }
@@ -609,7 +640,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
 
 
 
-        if(e-s<len){
+        if(e-s<2*len){
             break;
         }
 
@@ -619,7 +650,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
             if(debug){
                 Rprintf("i= %d\n", i);
             }
-            if(i>e-len || i<-1){
+            if(i>e-2*len || i<-1){
                 if(debug){
                     Rprintf("i= %d is skipped\n", i);
                 }
@@ -636,20 +667,20 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
 
             if(maxvalues[cord_spec(k,j,n)]<=NEGINF){
                  if(debug){
-                    Rprintf("segment (%d,%d] (k=%d, j=%d) not inspected, now checking!\n", i, i+len,k,j);
+                    Rprintf("segment (%d,%d] (k=%d, j=%d) not inspected, now checking!\n", i, i+2*len,k,j);
                  }
                 //this segment not computed!
                 //inspectOnSegment(cumsums, cusum, &tmpargmax, &tmpmaximum, s, e, p, lambda,
                  //   eps, maxiter, projvec, cusum_proj);
                  //double * cumsums, double * cusum, int * maxpos, double * maximum,
                  internal_check_segment(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxvalues[cord_spec(k,j,n)]), &(maxas[cord_spec(k,j,n)]),
-                            i, i+len, p, vector, thresholds, thresholds_test, as, nu_as,len_as, tmpvec, twologn, ts,fast,debug);
+                            i, i+2*len, p, vector, thresholds, thresholds_test, as, nu_as,len_as, tmpvec, twologn, ts,fast,debug);
                  //internal_inspectOnSegment(cumsums, cusum, &(maxpos[cord_spec(k,j,n)]), &(maxvalues[cord_spec(k,j,n)]), i, i+len, p,
                  //lambda,
                 //      eps, maxiter, mhat, mhatprod, v, v2,debug);
             }
             else if(debug){
-                Rprintf("segment (%d,%d] (k=%d, j=%d) already inspected, with max val %f in %d\n", i, i+len,k,j,
+                Rprintf("segment (%d,%d] (k=%d, j=%d) already inspected, with max val %f in %d\n", i, i+2*len,k,j,
                 maxvalues[cord_spec(k,j,n)],maxpos[cord_spec(k,j,n)]);
             }
             tmp = maxvalues[cord_spec(k,j,n)];
@@ -683,7 +714,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
     if(maximum >NEGINF+1){
         if(debug){
           Rprintf("!!!!!! declared change-point in %d. val = %f. (s,e] = (%d,%d]\n", argmax, maximum,
-          segstarts[cord_spec(k_max,j_max,n)], lens[j_max]+ segstarts[cord_spec(k_max,j_max,n)]);
+          segstarts[cord_spec(k_max,j_max,n)], 2*lens[j_max]+ segstarts[cord_spec(k_max,j_max,n)]);
           Rprintf("changeptcounter = %d\n", *changepoint_counter_ptr);
         }
 
@@ -703,7 +734,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
             i = segstarts[cord_spec(k_max,j_max,n)];
             len = lens[j_max];
             int ss = i;
-            int ee = i+len;
+            int ee = i+2*len;
             //CUSUM(cumsums, cusum, ss, ee, p);
             singleCUSUM(cumsums, cusum, ss, ee, p, argmax);
             //internal_threshold_matrix(&(cusum[cord_spec(0,argmax-ss-1,p)]), p, 1, as[maxa_pos],  nu_as[maxa_pos], 0,
@@ -725,7 +756,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
         depthcounter[*changepoint_counter_ptr] = depth;
         maxval[*changepoint_counter_ptr] = maximum;
         startpoints[*changepoint_counter_ptr] = segstarts[cord_spec(k_max,j_max,n)];
-        endpoints[*changepoint_counter_ptr] = segstarts[cord_spec(k_max,j_max,n)] + lens[j_max];
+        endpoints[*changepoint_counter_ptr] = segstarts[cord_spec(k_max,j_max,n)] + 2*lens[j_max];
         maxaposes[*changepoint_counter_ptr] = maxa_pos;
         (*changepoint_counter_ptr)++;
         if(*changepoint_counter_ptr >n){
@@ -750,7 +781,7 @@ void cHDCD_call(double * x, int s, int e, int n, int p, int depth, int* changepo
 }
 
 SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEXP lensI,SEXP lenLensI,SEXP KI,
-    SEXP asI, SEXP nu_asI, SEXP len_asI, SEXP twolognI, SEXP tsI, SEXP fastI, SEXP debugI){
+    SEXP asI, SEXP nu_asI, SEXP len_asI, SEXP twolognI, SEXP tsI, SEXP fastI, SEXP rescale_variance_boolI, SEXP debugI){
     // X : p \times n
     PROTECT(XI);
     PROTECT(thresholdsI);
@@ -766,6 +797,7 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
     PROTECT(twolognI);
     PROTECT(tsI);
     PROTECT(debugI);
+    PROTECT(rescale_variance_boolI);
     PROTECT(fastI);
 
     double * X = REAL(XI);
@@ -783,6 +815,7 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
     int * ts = INTEGER(tsI);
     int debug = *INTEGER(debugI);
     int fast = *INTEGER(fastI);
+    int rescale_variance_bool = *INTEGER(rescale_variance_boolI);
 
     if(debug){
       Rprintf("p = %d\n", p);
@@ -817,6 +850,30 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
     // first we compute all the cumulative sums of all
     // coordinates:
 
+    int maxlen = p;
+    int minlen = n;
+    if(n>p){
+        maxlen = n;
+        minlen = p;
+    }
+    SEXP vectorSEXP = PROTECT(allocVector(REALSXP, maxlen));
+
+
+    double * vector = REAL(vectorSEXP);
+    memset(vector, 0, sizeof(double)*maxlen);
+
+    SEXP scalesSEXP = PROTECT(allocVector(REALSXP, p));
+    double * scales = REAL(scalesSEXP);
+    for (int i = 0; i < p; ++i)
+    {
+        scales[i] = 1;
+    }
+
+    if (rescale_variance_bool)
+    {
+        rescale_variance(X, scales, n, p, vector);
+    }
+
     SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
     double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
     memset(cumsums, 0, p*(n+1)*sizeof(double));
@@ -833,17 +890,7 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
     SEXP cusumSEXP = PROTECT(allocVector(REALSXP, p*(n)));
     double * cusum = REAL(cusumSEXP);
     memset(cusum, 0, sizeof(double)*p*(n));
-    int maxlen = p;
-    int minlen = n;
-    if(n>p){
-        maxlen = n;
-        minlen = p;
-    }
-    SEXP vectorSEXP = PROTECT(allocVector(REALSXP, maxlen));
-
-
-    double * vector = REAL(vectorSEXP);
-    memset(vector, 0, sizeof(double)*maxlen);
+    
 
 
 
@@ -888,7 +935,7 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
             jump=1;
         }
 
-        for (int i = -1; i < (n-len); i+=jump)
+        for (int i = -1; i < (n-2*len); i+=jump)
         {
             //cord_spec(r,c, D) ((r) + (D)*(c))
             //compute_cusum(cumsum, i, i+len, &(maxpos[cord_spec(i,j,n)]), &(maxvalues[cord_spec(i,j,n)]));
@@ -941,7 +988,7 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
     int * changepointnum = INTEGER(changepointnumSEXP);
     *changepointnum = changepoint_counter;
 
-    SEXP ret = PROTECT(allocVector(VECSXP, 8)); //the list to be returned in R
+    SEXP ret = PROTECT(allocVector(VECSXP, 9)); //the list to be returned in R
     SET_VECTOR_ELT(ret, 0, out);
     SET_VECTOR_ELT(ret, 1, maxvalSEXP);
     SET_VECTOR_ELT(ret, 2, depthcounterSEXP);
@@ -950,9 +997,10 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
     SET_VECTOR_ELT(ret, 5, endpointsSEXP);
     SET_VECTOR_ELT(ret, 6, maxaposesSEXP);
     SET_VECTOR_ELT(ret, 7, changepointnumSEXP);
+    SET_VECTOR_ELT(ret, 8, scalesSEXP);
 
     // creating list of names/titles to be returned in the output list
-    SEXP names = PROTECT(allocVector(STRSXP, 8));
+    SEXP names = PROTECT(allocVector(STRSXP, 9));
     //SET_STRING_ELT(names, 0, mkChar("CUSUM"));
     SET_STRING_ELT(names, 0, mkChar("changepoints"));
     SET_STRING_ELT(names, 1, mkChar("CUSUMval"));
@@ -962,16 +1010,18 @@ SEXP cHDCD(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
     SET_STRING_ELT(names, 5, mkChar("endpoints"));
     SET_STRING_ELT(names, 6, mkChar("maxaposes"));
     SET_STRING_ELT(names, 7, mkChar("changepointnumber"));
+    SET_STRING_ELT(names, 8, mkChar("scales"));
 
     setAttrib(ret, R_NamesSymbol, names);
 
-    UNPROTECT(33);
+    UNPROTECT(35);
     return ret;
 }
 
 
 SEXP cHDCD_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLensI,SEXP KI,
-    SEXP asI, SEXP nu_asI, SEXP len_asI, SEXP twolognI, SEXP tsI, SEXP fastI, SEXP debugI){
+    SEXP asI, SEXP nu_asI, SEXP len_asI, SEXP twolognI, SEXP tsI, SEXP fastI, SEXP rescale_variance_boolI,
+    SEXP debugI){
     // X : p \times n
     PROTECT(lensI);
     PROTECT(asI);
@@ -985,7 +1035,9 @@ SEXP cHDCD_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
     PROTECT(len_asI);
     PROTECT(twolognI);
     PROTECT(tsI);
+    PROTECT(rescale_variance_boolI);
     PROTECT(debugI);
+
     PROTECT(fastI);
 
     int n = *(INTEGER(nI));
@@ -1002,6 +1054,7 @@ SEXP cHDCD_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
     int * ts = INTEGER(tsI);
     int debug = *INTEGER(debugI);
     int fast = *INTEGER(fastI);
+    int rescale_variance_bool = *INTEGER(rescale_variance_boolI);
 
     if(debug){
       Rprintf("p = %d\n", p);
@@ -1041,6 +1094,7 @@ SEXP cHDCD_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
     }
     SEXP vectorSEXP = PROTECT(allocVector(REALSXP, maxlen));
 
+   
 
     double * vector = REAL(vectorSEXP);
     memset(vector, 0, sizeof(double)*maxlen);
@@ -1066,14 +1120,14 @@ SEXP cHDCD_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
             jump=1;
         }
 
-        for (int i = -1; i < (n-len); i+=jump)
+        for (int i = -1; i < (n-2*len); i+=jump)
         {
             //cord_spec(r,c, D) ((r) + (D)*(c))
             //compute_cusum(cumsum, i, i+len, &(maxpos[cord_spec(i,j,n)]), &(maxvalues[cord_spec(i,j,n)]));
             segstarts[cord_spec(counter++,j,n)] = i;
-            if(debug){
+            /*if(debug){
                 //Rprintf("segstarts[%d, %d] = %d\n",counter-1, j, i );
-            }
+            }*/
 
 
         }
@@ -1098,17 +1152,38 @@ SEXP cHDCD_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
     }*/
     GetRNGstate();
 
+    SEXP XSEXP = PROTECT(allocVector(REALSXP, p * (n)));
+    double *X = REAL(XSEXP); // p \times (n+1). first col is 0
+    memset(X, 0, p*(n)*sizeof(double));
+
+    //SEXP X2 = NULL;
+
     for (k = 0; k < N; ++k)
     {
         
         // generate X
+
+        for (i = 0; i < p; ++i)
+        {
+            for (j = 0; j < n; ++j)
+            {
+                X[cord_spec(i,j,p)] = rnorm(0.0, 1.0);
+            }
+        }
+
+        // normalize / rescale variance
+        if (rescale_variance_bool)
+        {
+            rescale_variance(X,NULL, n, p, vector);
+        }
+        
         memset(cumsums, 0, p*sizeof(double));
 
         for (i = 0; i < p; ++i)
         {
             for (j = 0; j < n; ++j)
             {
-                cumsums[cord_spec(i,j+1,p)] = rnorm(0.0, 1.0) +cumsums[cord_spec(i,j, p)];
+                cumsums[cord_spec(i,j+1,p)] = X[cord_spec(i,j,p)] +cumsums[cord_spec(i,j, p)];
             }
         }
 
@@ -1116,27 +1191,27 @@ SEXP cHDCD_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
         for ( ll = 0; ll < lenLens; ++ll)
         {
             len = lens[ll];
-            if(debug){
+            /*if(debug){
                 Rprintf("ll=%d, len = %d\n", ll, len);
-            }
+            }*/
 
 
 
-            if(e-s<len){
+            if(e-s<2*len){
                 break;
             }
 
             for (hh = 0; hh < n; ++hh)
             {
                 ss = segstarts[cord_spec(hh,ll,n)];
-                ee = ss+len;
-                if(debug){
+                ee = ss+2*len;
+                /*if(debug){
                     Rprintf("i= %d\n", hh);
-                }
+                }*/
                 if( ee >n || ss<-1){
-                    if(debug){
+                    /*if(debug){
                         Rprintf("i= %d is shhipped\n", hh);
-                    }
+                    }*/
                     break;
                 }
 
@@ -1296,7 +1371,7 @@ SEXP cHDCD_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
     setAttrib(ret, R_NamesSymbol, names);
 
 
-    UNPROTECT(25);
+    UNPROTECT(27);
     return(ret);
 
 
@@ -1317,7 +1392,7 @@ SEXP cHDCD_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
 
 
 
-    SEXP out = PROTECT(allocVector(INTSXP, n));
+   /* SEXP out = PROTECT(allocVector(INTSXP, n));
     int * changepoints = INTEGER(out); //pointer to array
     //memset(changepoints, -1, sizeof(int)*n);
     for (size_t i = 0; i < n; i++) {
@@ -1391,7 +1466,7 @@ SEXP cHDCD_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
 
           }
       }
-    }
+    }*/
 
 
 

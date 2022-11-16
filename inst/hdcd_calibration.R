@@ -1,3 +1,10 @@
+# hdcd calibration
+# this is to find the best constants and penalty funcs to estimate a single change point
+# seems like method 1 (with n^4 and + on the log) with 
+# dense_const = 1.5 (const1)
+# sparse_const =  1.5 (const2)
+# works very well
+
 #### Simulation for a single change-point
 library(doSNOW)
 library(HDCD)
@@ -10,7 +17,7 @@ dateandtime = gsub(":", ".", dateandtime)
 savedir = file.path(maindir, dateandtime)
 
 source("/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/HDCD/SUBSET/SUBSET_normal.R")
-save = TRUE
+save = FALSE
 
 if(save){
   dir.create(savedir, showWarnings = FALSE)
@@ -27,20 +34,14 @@ ps = c(100,1000,5000)
 kvals=4
 totruns = length(ns)*length(ps)*kvals
 
-simsbsN = 1000
-simsbstoln = 1
+const1 = seq(1,2, by = 0.1)
+const2 = seq(0.5,2, by = 0.1)
 
-#for sbs: 
-pis = matrix(nrow = length(ns), ncol =length(ps))
-for (i in 1:length(ns)) {
-  for (j in 1:length(ps)) {
-    pis[i,j] =  single_SBS_calibrate(ns[i],ps[j],simsbsN,simsbstoln,debug=FALSE)
-    
-  }
-}
+# const1 = c(1,2)
+# const2 = c(1,2)
 
 
-N = 100
+N = 36*6
 num_cores = 6
 sparse_const = 2.5
 dense_const = 2.5
@@ -81,11 +82,12 @@ registerDoSNOW(cl)
 pb <- txtProgressBar(max = N, style = 3)
 progress <- function(n) setTxtProgressBar(pb, n)
 opts <- list(progress = progress)
-result = foreach(z = 1:N, .combine="cbind",.options.snow = opts) %dopar% {
-  rez = c()
+# result = foreach(z = 1:N, .combine="cbind",.options.snow = opts) %dopar% {
+result = foreach(z = 1:N,.options.snow = opts) %dopar% {
+  rez = list()
+  count = 1
   set.seed(z)
   library(HDCD)
-  library(hdbinseg)
   source("/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/HDCD/SUBSET/SUBSET_normal.R")
   for (i in 1:length(ns)) {
     n = ns[i]
@@ -98,7 +100,8 @@ result = foreach(z = 1:N, .combine="cbind",.options.snow = opts) %dopar% {
         
         mus = matrix(0, nrow=p, ncol=n)
         noise = matrix(rnorm(n*p), nrow=p, ncol=n)
-        eta = round(0.2*n)
+        #eta = round(0.2*n)
+        eta = max(1, round(0.5*runif(1)*n))
         
         
         diff = 0
@@ -114,74 +117,50 @@ result = foreach(z = 1:N, .combine="cbind",.options.snow = opts) %dopar% {
         
         X = mus+noise
         
-        
-        # DC
-        a = proc.time()
-        res = dcbs.alg(X,height=1, thr = 0,cp.type=1,phi=-1,temporal=FALSE )
-        b=proc.time()
-        dc_res = res$ecp
-        dc_time = (b-a)[1]+(b-a)[2]
-        if(is.null(dc_res)){
-          dc_res = 1
-        }
-        #then sbs
-        a = proc.time()
-        res = sbs.alg(X,height=1, thr = rep(pis[i,j],p),cp.type=1,temporal=FALSE )
-        b=proc.time()
-        sbs_time = (b-a)[1]+(b-a)[2]
-        sbs_res = res$pos
-        
-        
-        # now rescale variance
         X = rescale.variance(X)
         # first inspect
-        lambda = sqrt(log(p*log(n))/2) 
         
-        a = proc.time()
-        res = single_Inspect(X[,], lambda)
-        b=proc.time()
-        inspect_time = (b-a)[1]+(b-a)[2]
-        inspect_res= res$pos
+        # logn4 and plus
+        mat = array(NA, dim = c(4,length(const1),length(const2)))
+        # # logn4 and max
+        # mat2 = matrix(NA, nrow = length(const1), ncol = length(const2))
+        # # logn and plus
+        # mat3 = matrix(NA, nrow = length(const1), ncol = length(const2))
+        # # logn and max
+        # mat4 = matrix(NA, nrow = length(const1), ncol = length(const2))
         
-        # then hdcd
-        a = proc.time()
-        res  = single_HDCD_two(X[,], 1.5,1, debug =FALSE)
-        b=proc.time()
-        hdcd_time = (b-a)[1]+(b-a)[2]
-        hdcd_res = res$pos
-        hdcd_s = res$s
+        # 5 & 6 -- other formula??
         
-        # then scan
-        a = proc.time()
-        res  = single_Scan (X[,], debug =FALSE)
-        b=proc.time()
-        scan_time = (b-a)[1]+(b-a)[2]
-        scan_res = res$pos
-        scan_s = res$s
-        
-        
-        
-        #rez = cbind(rez, c(z,i,j,y,k,inspect_res, inspect_time, hdcd_res, hdcd_time,hdcd_s, scan_res, scan_time, scan_s))
-        
-        # then subset
-        a = proc.time()
-        res  = SUBSET.normal(X[,])
-        b=proc.time()
-        subset_time = (b-a)[1]+(b-a)[2]
-        subset_res = res$cpt
-        if(is.null(subset_res)){
-          subset_res = 1
+        for (cc1 in 1:length(const1)) {
+          for (cc2 in 1:length(const2)) {
+            res  = single_HDCD (X[,], const1[cc1],const2[cc2], debug =FALSE)
+            mat[1,cc1, cc2] = res$pos 
+            res  = single_HDCD_two(X[,], const1[cc1],const2[cc2], debug =FALSE)
+            mat[2,cc1, cc2] = res$pos 
+            res  = single_HDCD_three(X[,], const1[cc1],const2[cc2], debug =FALSE)
+            mat[3,cc1, cc2] = res$pos 
+            res  = single_HDCD_four(X[,], const1[cc1],const2[cc2], debug =FALSE)
+            mat[4,cc1, cc2] = res$pos 
+            
+            
+          }
         }
         
         
-        rez = cbind(rez, c(z,i,j,y,k,inspect_res, inspect_time, hdcd_res, hdcd_time,hdcd_s, scan_res, scan_time, scan_s, sbs_res, sbs_time, 
-                           subset_res, subset_time, dc_res, dc_time))
+        #rez = cbind(rez, c(z,i,j,y,k,inspect_res, inspect_time, hdcd_res, hdcd_time,hdcd_s, scan_res, scan_time, scan_s, sbs_res, sbs_time, 
+        #                   subset_res, subset_time, dc_res, dc_time))
+        rez[[count]] = list()
+        rez[[count]][[1]] = c(z,i,j,y,k, eta)
+        rez[[count]][[2]] = mat
+        count = count+1
+        
+
         
         
       }
     }
   }
-
+  
   rez
 }
 # bb = proc.time()
@@ -189,6 +168,105 @@ result = foreach(z = 1:N, .combine="cbind",.options.snow = opts) %dopar% {
 #parallel::stopCluster(cl)
 close(pb)
 stopCluster(cl) 
+
+
+
+
+
+{
+  
+  mse1 = array(0, dim=c(length(ns), length(ps), kvals, length(const1), length(const2)))
+  mse2 = array(0, dim=c(length(ns), length(ps), kvals, length(const1), length(const2)))
+  mse3 = array(0, dim=c(length(ns), length(ps), kvals, length(const1), length(const2)))
+  mse4 = array(0, dim=c(length(ns), length(ps), kvals, length(const1), length(const2)))
+  
+  mse_avg1 = array(0, dim=c(length(const1), length(const2)))
+  mse_avg2 = array(0, dim=c(length(const1), length(const2)))
+  mse_avg3 = array(0, dim=c(length(const1), length(const2)))
+  mse_avg4 = array(0, dim=c(length(const1), length(const2)))
+  
+  est1 = array(0, dim=c(length(ns), length(ps), kvals, length(const1), length(const2),N))
+  est2 = array(0, dim=c(length(ns), length(ps), kvals, length(const1), length(const2),N))
+  est3 = array(0, dim=c(length(ns), length(ps), kvals, length(const1), length(const2),N))
+  est4 = array(0, dim=c(length(ns), length(ps), kvals, length(const1), length(const2),N))
+  
+  
+  for(rr1 in result){
+    for (run in rr1) {
+      
+      
+      eta = run[[1]][6]
+      ii = run[[1]][2]
+      jj = run[[1]][3]
+      yy = run[[1]][4]
+      zz = run[[1]][1]
+      eta = run[[1]][6]
+      
+      mat = run[[2]]
+      
+      for (cc1 in 1:length(const1)) {
+        for (cc2 in 1:length(const2)) {
+          mse1[ii, jj, yy, cc1,cc2] = mse1[ii, jj, yy, cc1,cc2] + (mat[1, cc1, cc2] - eta)^2
+          mse2[ii, jj, yy, cc1,cc2] = mse2[ii, jj, yy, cc1,cc2] + (mat[2, cc1, cc2] - eta)^2
+          mse3[ii, jj, yy, cc1,cc2] = mse3[ii, jj, yy, cc1,cc2] + (mat[3, cc1, cc2] - eta)^2
+          mse4[ii, jj, yy, cc1,cc2] = mse4[ii, jj, yy, cc1,cc2] + (mat[4, cc1, cc2] - eta)^2
+          
+          mse_avg1[cc1,cc2] = mse_avg1[cc1,cc2] + (mat[1, cc1, cc2] - eta)^2
+          mse_avg2[cc1,cc2] = mse_avg2[cc1,cc2] + (mat[2, cc1, cc2] - eta)^2
+          mse_avg3[cc1,cc2] = mse_avg3[cc1,cc2] + (mat[3, cc1, cc2] - eta)^2
+          mse_avg4[cc1,cc2] = mse_avg4[cc1,cc2] + (mat[4, cc1, cc2] - eta)^2
+          
+          if(yy ==1 || yy==2 ){
+            mse_avg1[cc1,cc2] = mse_avg1[cc1,cc2] + (mat[1, cc1, cc2] - eta)^2
+          }
+          
+          est1[ii,jj,yy,cc1,cc2,zz] = mat[1, cc1, cc2]
+          est2[ii,jj,yy,cc1,cc2,zz] = mat[2, cc1, cc2]
+          est3[ii,jj,yy,cc1,cc2,zz] = mat[3, cc1, cc2]
+          est4[ii,jj,yy,cc1,cc2,zz] = mat[4, cc1, cc2]
+        }
+        
+      }
+    }
+  }
+  mse1 = mse1/N
+  mse2 = mse2/N
+  mse3 = mse3/N
+  mse4 = mse4/N
+  
+  mse_avg1 = mse_avg1 / (N * length(ns)*length(ps)*kvals)
+  mse_avg2 = mse_avg2 / (N * length(ns)*length(ps)*kvals)
+  mse_avg3 = mse_avg3 / (N * length(ns)*length(ps)*kvals)
+  mse_avg4 = mse_avg4 / (N * length(ns)*length(ps)*kvals)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 {
   inspect_res = array(NA, dim = c(length(ns), length(ps), kvals,N) )
@@ -293,11 +371,10 @@ if(save){
 # creating table:
 if(save){
   # output latex table
-  printlines = c("\\begin{table}[H] \\centering",
-                 "\\caption{Single change-point estimation}",
+  printlines = c("\\begin{table}[!htbp] \\centering",
+                 "\\caption{Change spread evenly across coordinates}",
                  "\\label{}",
                  "\\small",
-                 "\\begin{adjustbox}{scale=0.9,center}",
                  "\\begin{tabular}{@{\\extracolsep{1pt}} ccccc|ccccc|ccccc}",
                  "\\hline", 
                  "\\multicolumn{5}{c|}{Parameters} & \\multicolumn{5}{c|}{MSE} &\\multicolumn{5}{c|}{Time in miliseconds} \\\\ \\hline ",
@@ -352,7 +429,6 @@ if(save){
   
   printlines = c(printlines, c("\\hline \\\\[-1.8ex]",
                                "\\end{tabular}",
-                               "\\end{adjustbox}",
                                "\\end{table}"))
   texfile<-file(sprintf("%s/table_even.tex", savedir))
   writeLines(printlines, texfile)
@@ -395,12 +471,12 @@ for (i in 1:length(ns)) {
       if(var(sbs_res[i,j,kk,])>0.0001){
         rezz_sbs = logConDens(sbs_res[i,j,kk,],smoothed=FALSE, print=FALSE)
       }
-
+      
       rezz_subset = logConDens(subset_res[i,j,kk,],smoothed=FALSE, print=FALSE)
       rezz_scan = logConDens(scan_res[i,j,kk,],smoothed=FALSE, print=FALSE)
       rezz_dc = logConDens(dc_res[i,j,kk,],smoothed=FALSE, print=FALSE)
       
-    
+      
       xs = seq(1,n, by=1)
       dens_hdcd = rep(NA, length(xs))
       dens_inspect = rep(NA, length(xs))
@@ -442,14 +518,14 @@ for (i in 1:length(ns)) {
       dff = data.frame(x = xs, values = c(dens_hdcd, dens_inspect, dens_sbs, dens_subset,dens_dc),
                        fun = c(rep("FAST", length(xs)), rep("Inspect", length(xs)), 
                                rep("SBS", length(xs)),rep("SUBSET", length(xs)),rep("DC", length(xs)))
-                       )
+      )
       
       p = ggplot(dff,aes(x,values,col=fun))+geom_line(size=1.3, aes(linetype=fun)) +
         theme(legend.position="top",legend.title=element_blank(),text = element_text(size = 30)) +
         xlab('estimated change-point location') 
-        #   ylab('density') 
+      #   ylab('density') 
       
-
+      
       #print(p)
       ggsave(filename = sprintf("%s/i=%d_j=%d_kk=%d.pdf", plotdir,i, j, kk),
              plot = p,device = "pdf", dpi = 300)
@@ -534,7 +610,7 @@ result_uneven = foreach(z = 1:N, .combine="cbind",.options.snow = opts) %dopar% 
         scan_res = res$pos
         scan_s = res$s
         
-
+        
         rez = cbind(rez, c(z,i,j,y,k,inspect_res, inspect_time, hdcd_res, hdcd_time,hdcd_s, scan_res, scan_time, scan_s))        
         
       }
@@ -612,7 +688,7 @@ if(save){
   saveRDS(scan_time_uneven, file=sprintf("%s/scan_time_uneven.RDA", savedir))
   saveRDS(scan_mse_uneven, file=sprintf("%s/scan_mse_uneven.RDA", savedir))
   
-
+  
 }
 
 # creating table:
@@ -654,7 +730,7 @@ if(save){
             string = sprintf("%s & %.3f", string, res[t])
           }
         }
-
+        
         
         res = round(c(hdcd_time_uneven[i,j,y],inspect_time_uneven[i,j,y], scan_time_uneven[i,j,y])/N*1000,digits=3)
         minind = (res==min(res))

@@ -145,12 +145,12 @@ void cPilliat_call(double * x, int n, int p, int* changepoints,
     int check = 1;
     for (int j = 0; j < lenLens; ++j)
     {
-        len = lens[j]-1;
+        len = lens[j];
         if(debug){
             Rprintf("j=%d, len = %d\n", j, len);
         }
 
-        jump = len /2;
+        jump = len ;
 
 
         
@@ -263,7 +263,7 @@ void cPilliat_call(double * x, int n, int p, int* changepoints,
 }
 
 SEXP cPilliat(SEXP XI,SEXP nI, SEXP pI,SEXP thresholds_partialI, SEXP threshold_denseI, SEXP thresholds_bjI,
-    SEXP lensI,SEXP lenLensI,SEXP KI, SEXP maxxI,SEXP debugI){
+    SEXP lensI,SEXP lenLensI,SEXP KI, SEXP maxxI, SEXP rescale_variance_boolI, SEXP debugI){
     // X : p \times n
     PROTECT(XI);
     PROTECT(thresholds_partialI);
@@ -281,6 +281,7 @@ SEXP cPilliat(SEXP XI,SEXP nI, SEXP pI,SEXP thresholds_partialI, SEXP threshold_
     //PROTECT(twolognI);
     PROTECT(maxxI);
     PROTECT(debugI);
+    PROTECT(rescale_variance_boolI);
     
 
     double * X = REAL(XI);
@@ -299,6 +300,7 @@ SEXP cPilliat(SEXP XI,SEXP nI, SEXP pI,SEXP thresholds_partialI, SEXP threshold_
     //int len_as = *(INTEGER(len_asI));
     //int twologn = * (INTEGER(twolognI));
     int debug = *INTEGER(debugI);
+    int rescale_variance_bool = *INTEGER(rescale_variance_boolI);
     int K = *INTEGER(KI);
 
     if(debug){
@@ -333,6 +335,23 @@ SEXP cPilliat(SEXP XI,SEXP nI, SEXP pI,SEXP thresholds_partialI, SEXP threshold_
     }
     // first we compute all the cumulative sums of all
     // coordinates:
+
+    SEXP scalesSEXP = PROTECT(allocVector(REALSXP, p));
+    double * scales = REAL(scalesSEXP);
+    for (int i = 0; i < p; ++i)
+    {
+        scales[i] = 1;
+    }
+
+    if (rescale_variance_bool)
+    {
+        SEXP tmpvecSEXP = PROTECT(allocVector(REALSXP, n));
+        double * tmpvec = REAL(tmpvecSEXP);
+        memset(tmpvec, 0, sizeof(double)*n);
+        rescale_variance(X, scales,  n, p, tmpvec);
+        UNPROTECT(1);
+    }
+
 
     SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
     double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
@@ -387,25 +406,27 @@ SEXP cPilliat(SEXP XI,SEXP nI, SEXP pI,SEXP thresholds_partialI, SEXP threshold_
     int * changepointnum = INTEGER(changepointnumSEXP);
     *changepointnum = changepoint_counter;
 
-    SEXP ret = PROTECT(allocVector(VECSXP, 5)); //the list to be returned in R
+    SEXP ret = PROTECT(allocVector(VECSXP, 6)); //the list to be returned in R
     SET_VECTOR_ELT(ret, 0, out);
     SET_VECTOR_ELT(ret, 1, startpointsSEXP);
     SET_VECTOR_ELT(ret, 2, endpointsSEXP);
     SET_VECTOR_ELT(ret, 3, changepointnumSEXP);
     SET_VECTOR_ELT(ret, 4, teststatSEXP);
+    SET_VECTOR_ELT(ret, 5, scalesSEXP);
 
     // creating list of names/titles to be returned in the output list
-    SEXP names = PROTECT(allocVector(STRSXP, 5));
+    SEXP names = PROTECT(allocVector(STRSXP, 6));
     //SET_STRING_ELT(names, 0, mkChar("CUSUM"));
     SET_STRING_ELT(names, 0, mkChar("changepoints"));
     SET_STRING_ELT(names, 1, mkChar("startpoints"));
     SET_STRING_ELT(names, 2, mkChar("endpoints"));
     SET_STRING_ELT(names, 3, mkChar("number_of_changepoints"));
     SET_STRING_ELT(names, 4, mkChar("test_stat")); // 0 dense, 1 partial, 2 bj
+    SET_STRING_ELT(names, 5, mkChar("scales")); 
 
     setAttrib(ret, R_NamesSymbol, names);
 
-    UNPROTECT(22);
+    UNPROTECT(24);
     return ret;
 }
 
@@ -503,7 +524,7 @@ SEXP cHDCD_single(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI,
 }*/
 
 SEXP cPilliat_calibrate(SEXP nI, SEXP pI,SEXP NI, SEXP tolnI, SEXP lensI,SEXP lenLensI,SEXP KI,
-    SEXP maxxI, SEXP log2pI, SEXP debugI){
+    SEXP maxxI, SEXP log2pI, SEXP rescale_variance_boolI, SEXP debugI){
 
     PROTECT(nI);
     PROTECT(pI);
@@ -515,6 +536,7 @@ SEXP cPilliat_calibrate(SEXP nI, SEXP pI,SEXP NI, SEXP tolnI, SEXP lensI,SEXP le
     PROTECT(tolnI);
     
     PROTECT(maxxI);
+    PROTECT(rescale_variance_boolI);
     PROTECT(debugI);
 
     int n = *(INTEGER(nI));
@@ -526,6 +548,7 @@ SEXP cPilliat_calibrate(SEXP nI, SEXP pI,SEXP NI, SEXP tolnI, SEXP lensI,SEXP le
     int lenLens = *(INTEGER(lenLensI));
     int * lens = INTEGER(lensI);
     int debug = *INTEGER(debugI);
+    int rescale_variance_bool = *INTEGER(rescale_variance_boolI);
 
     if(debug){
         Rprintf("n = %d\n",n);
@@ -576,6 +599,9 @@ SEXP cPilliat_calibrate(SEXP nI, SEXP pI,SEXP NI, SEXP tolnI, SEXP lensI,SEXP le
     double * cusum = REAL(cusumSEXP);
     memset(cusum, 0, sizeof(double)*p);
 
+    SEXP vectorSEXP = PROTECT(allocVector(REALSXP, n));
+    double * vector = REAL(vectorSEXP);
+    memset(vector, 0, sizeof(double)*n);
 
     int jump;
     int jj;
@@ -594,24 +620,43 @@ SEXP cPilliat_calibrate(SEXP nI, SEXP pI,SEXP NI, SEXP tolnI, SEXP lensI,SEXP le
 
     GetRNGstate();
 
+    SEXP XSEXP = PROTECT(allocVector(REALSXP, p * (n)));
+    double *X = REAL(XSEXP); // p \times (n+1). first col is 0
+    memset(X, 0, p*(n)*sizeof(double));
+
     for (k = 0; k < N; ++k)
     {
         
         // generate X
+
+        for (i = 0; i < p; ++i)
+        {
+            for (j = 0; j < n; ++j)
+            {
+                X[cord_spec(i,j,p)] = rnorm(0.0, 1.0);
+            }
+        }
+
+        // normalize / rescale variance
+        if (rescale_variance_bool)
+        {
+            rescale_variance(X, NULL,n, p, vector);
+        }
+        
         memset(cumsums, 0, p*sizeof(double));
 
         for (i = 0; i < p; ++i)
         {
             for (j = 0; j < n; ++j)
             {
-                cumsums[cord_spec(i,j+1,p)] = rnorm(0.0, 1.0) +cumsums[cord_spec(i,j, p)];
+                cumsums[cord_spec(i,j+1,p)] = X[cord_spec(i,j,p)] +cumsums[cord_spec(i,j, p)];
             }
         }
 
 
         for (j = 0; j < lenLens; ++j)
         {
-            len = lens[j]-1;
+            len = lens[j];
             if(debug){
                 Rprintf("j=%d, len = %d\n", j, len);
             }
@@ -725,7 +770,7 @@ SEXP cPilliat_calibrate(SEXP nI, SEXP pI,SEXP NI, SEXP tolnI, SEXP lensI,SEXP le
             }
             else{
                 //stop=0;
-                v = len-1;
+                v = len;
                 jj = 2;
                 stop = 0;
                 while(1){
@@ -900,7 +945,7 @@ SEXP cPilliat_calibrate(SEXP nI, SEXP pI,SEXP NI, SEXP tolnI, SEXP lensI,SEXP le
     setAttrib(ret, R_NamesSymbol, names);
 
 
-    UNPROTECT(22);
+    UNPROTECT(25);
     return(ret);
 
 

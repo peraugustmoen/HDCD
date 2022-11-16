@@ -20,7 +20,7 @@ Scan = function(X, threshold_const = 1, alpha = 1+1/6, K = 7, debug =FALSE){
   
   
   sequ = 1:p
-  Ts = sqrt(2/sequ) *log(choose(p,sequ)*n^4) + sqrt(2*log(choose(p,sequ)*n^4))
+  Ts =  sqrt(2/sequ) *log(choose(p,sequ)*n^4) + sqrt(2*log(choose(p,sequ)*n^4))
   Ts[p] = sqrt(2*log(n^4)) + sqrt(2/p)*log(n^4)
   Ts  = threshold_const*Ts
   
