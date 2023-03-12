@@ -3,10 +3,10 @@
 #include <R.h>
 #include <Rmath.h>
 #include <Rdefines.h>
-#include <R_ext/RS.h>	// RK addition
+/*#include <R_ext/RS.h>	// RK addition
 #include <R_ext/Lapack.h> // RK addition
 #include <R_ext/BLAS.h> // RK addition
-#include <math.h>
+#include <math.h>*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -15,7 +15,7 @@
 
 //#define NEGINF -(FLT_MAX -10.0)
 #define NEGINF -100000000.0
-#define MADCONST 1.482602
+#define MADCONST 1.4826
 
 void internal_matmult(double *,
                       double *,
