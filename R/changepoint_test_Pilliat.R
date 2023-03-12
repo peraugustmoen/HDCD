@@ -7,6 +7,7 @@ changepoint_test_Pilliat = function(X, empirical =FALSE, N = 100, tol = 0.05,
                                     thresholds_partial=NULL, threshold_dense = NULL,
                                     thresholds_bj = NULL,
                                     threshold_d_const=4, threshold_bj_const=6, threshold_partial_const=4,
+                                    rescale_variance = TRUE,fast = FALSE,
                                     debug =FALSE){
   p = dim(X)[1]
   n = dim(X)[2]
@@ -80,7 +81,7 @@ changepoint_test_Pilliat = function(X, empirical =FALSE, N = 100, tol = 0.05,
     }
   }
   
-  if(TRUE){
+  if(debug){
     print(threshold_dense)
     print(thresholds_partial)
     print(thresholds_bj)
@@ -96,7 +97,8 @@ changepoint_test_Pilliat = function(X, empirical =FALSE, N = 100, tol = 0.05,
   
   res = .Call(cPilliat_test, as.numeric(X),as.integer(n),as.integer(p),
               as.numeric(thresholds_partial), as.numeric(threshold_dense), 
-              as.integer(thresholds_bj),as.integer(maxx), as.integer(debug))
+              as.integer(thresholds_bj),as.integer(maxx), as.integer(rescale_variance),
+              as.integer(fast),as.integer(debug))
 
   return(res)
 }
@@ -104,7 +106,8 @@ changepoint_test_Pilliat = function(X, empirical =FALSE, N = 100, tol = 0.05,
 
 
 #' @export
-changepoint_test_Pilliat_calibrate = function(n,p, N=100, tol=0.05,threshold_bj_const=6,debug=FALSE){
+changepoint_test_Pilliat_calibrate = function(n,p, N=100, tol=0.05,threshold_bj_const=6,
+                                              rescale_variance = TRUE,fast = FALSE,debug=FALSE){
 
   log2p = floor(log(p,base=2))+1
   
@@ -128,7 +131,8 @@ changepoint_test_Pilliat_calibrate = function(n,p, N=100, tol=0.05,threshold_bj_
 
   
   res= .Call(cPilliat_test_calibrate, as.integer(n), as.integer(p), as.integer(N), 
-             as.integer(toln), as.integer(maxx), as.integer(log2p),as.integer(debug))
+             as.integer(toln), as.integer(maxx), as.integer(log2p),as.integer(rescale_variance),
+             as.integer(fast),as.integer(debug))
   #res[["as"]] = as
   #res[["nu_as"]] = nu_as
   return(res)

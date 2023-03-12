@@ -1,18 +1,20 @@
-
 #### Simulation for multiple change-points
+#install.packages("InspectChangepoint", repos = "http:cran.us.r-project.org")
+#install.packages("hdbinseg",repos = "http:cran.us.r-project.org")
+#install.packages("/mn/sarpanitu/ansatte-u2/pamoen/project_inspect/simulations_nov_22/HDCD", repos=NULL, type="source")
 
 library(doSNOW)
 library(HDCD)
 library(foreach)
 ## same magnitude in all coords
 
-maindir = "/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/Simulations_HDCD"
+maindir = "/Users/peraugust/Library/CloudStorage/OneDrive-UniversitetetiOslo/project1/simulations/Simulations_HDCD/"
 dateandtime = gsub(" ", "--",as.character(Sys.time()))
 dateandtime = gsub(":", ".", dateandtime)
 savedir = file.path(maindir, dateandtime)
+calibrates_path = "/Users/peraugust/uioomrade/project_inspect/simulations_nov_22/2022-11-19--14.33.15/multi/calibrates.RDA"
 
-
-save = TRUE
+save = FALSE
 
 if(save){
   dir.create(savedir, showWarnings = FALSE)
@@ -22,14 +24,16 @@ if(save){
 }
 
 
-N = 1000
+
+N = 6
 num_cores = 6
-sparse_const = 4
-dense_const = 4
+sparse_const = 3.5
+dense_const = 3.5
 set.seed(1996)
-rescale_variance = TRUE
+rescale_variance = FALSE
 Ncal = 1000
-tol = 1/Ncal*10
+tol = 1/Ncal
+calibrated = TRUE
 #tol = 0.001
 
 #ns = c(500,1000,2000)
@@ -43,13 +47,11 @@ tol = 1/Ncal*10
 #kvals=4
 #totruns = length(ns)*length(ps)*kvals
 #ns = c(100,200,500,2000)
-#ns = c(200,500)
-ns = c(20)
+ns = c(200)
 #ns = c(500)
 #ps = c(1000)
-#ps = c(50,100,500,1000,4000)
-ps = c(50)
-#ps = c(50,100,1000,5000)
+ps = c(1000)
+#ps = c(50,100)
 #ps = c(50,100,500,5000)
 #ps = ns[]
 
@@ -61,73 +63,78 @@ ps = c(50)
 
 
 
-
+calibrates = NULL
 # calibrate
-
-cl <- makeCluster(num_cores,type="SOCK")
-registerDoSNOW(cl)
-pb <- txtProgressBar(max = ((length(ns)*length(ps))), style = 3)
-progress <- function(n) setTxtProgressBar(pb, n)
-opts <- list(progress = progress)
-calibrates = foreach(z = 0:((length(ns)*length(ps))-1),.options.snow = opts) %dopar% {
-#for(z in 0:((length(ns)*length(ps))-1)){
-  library(HDCD)
-  set.seed(300*z)
-  rez = list()
-  nind = floor(z/length(ps))+1
-  pind = z%%length(ps)+1
-  cc = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=4, alpha = 2, fast = TRUE,
-                      rescale_variance = rescale_variance, debug=FALSE)
-  cc4 = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=5, alpha = 1.5, fast = FALSE,
-                       rescale_variance = rescale_variance, debug=FALSE)
-  # cc2 = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,debug=FALSE)
-  lambda = sqrt(log(ps[pind]*log(ns[nind]))/2)
-  cc2 = Inspect_calibrate(n = ns[nind], p = ps[pind], N=Ncal, tol=tol,lambda = lambda , alpha = 2, K = 4,eps=1e-10,
-                          maxiter=10000,rescale_variance = rescale_variance, debug =FALSE)
-  
-  cc3 = Pilliat_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K = 4,
-                          rescale_variance = rescale_variance, debug=FALSE)
-  
-  source("/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/HDCD/SUBSET/main.R")
-  
-  
-  empirical_penalties = rep(NA, Ncal)
-  if(rescale_variance){
-    for (i in 1:Ncal) {
-      mynulldata <- matrix(rnorm(ns[nind]*ps[pind],0,1),nrow=ps[pind],ncol=ns[nind],byrow=FALSE) # 5 variates with 1000 time points, no change
-      empirical_penalties[i] = wbs_penaltyfinder(InspectChangepoint::rescale.variance(mynulldata), SUBSET.normal_penalty, 100)
+if(calibrated){
+  calibrates = readRDS(calibrates_path)
+}else{
+  cl <- makeCluster(num_cores,type="SOCK")
+  registerDoSNOW(cl)
+  pb <- txtProgressBar(max = ((length(ns)*length(ps))), style = 3)
+  progress <- function(n) setTxtProgressBar(pb, n)
+  opts <- list(progress = progress)
+  calibrates = foreach(z = 0:((length(ns)*length(ps))-1),.options.snow = opts) %dopar% {
+    #for(z in 0:((length(ns)*length(ps))-1)){
+    library(HDCD)
+    set.seed(300*z)
+    rez = list()
+    nind = floor(z/length(ps))+1
+    pind = z%%length(ps)+1
+    cc = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=4, alpha = 2, fast = TRUE,
+                        rescale_variance = rescale_variance, debug=FALSE)
+    cc4 = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=5, alpha = 1.5, fast = FALSE,
+                         rescale_variance = rescale_variance, debug=FALSE)
+    # cc2 = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,debug=FALSE)
+    lambda = sqrt(log(ps[pind]*log(ns[nind]))/2)
+    cc2 = Inspect_calibrate(n = ns[nind], p = ps[pind], N=Ncal, tol=tol,lambda = lambda , alpha = 2, K = 4,eps=1e-10,
+                            maxiter=10000,rescale_variance = rescale_variance, debug =FALSE)
+    
+    cc3 = Pilliat_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K = 4,
+                            rescale_variance = rescale_variance, debug=FALSE)
+    
+    source("/mn/sarpanitu/ansatte-u2/pamoen/project_inspect/simulations_nov_22/HDCD/SUBSET/main.R")
+    
+    
+    empirical_penalties = rep(NA, Ncal)
+    if(rescale_variance){
+      for (i in 1:Ncal) {
+        mynulldata <- matrix(rnorm(ns[nind]*ps[pind],0,1),nrow=ps[pind],ncol=ns[nind],byrow=FALSE) # 5 variates with 1000 time points, no change
+        empirical_penalties[i] = wbs_penaltyfinder(InspectChangepoint::rescale.variance(mynulldata), SUBSET.normal_penalty, 100)
+      }
+    }else{
+      for (i in 1:Ncal) {
+        mynulldata <- matrix(rnorm(ns[nind]*ps[pind],0,1),nrow=ps[pind],ncol=ns[nind],byrow=FALSE) # 5 variates with 1000 time points, no change
+        empirical_penalties[i] = wbs_penaltyfinder(mynulldata, SUBSET.normal_penalty, 100)
+      }
     }
-  }else{
-    for (i in 1:Ncal) {
-      mynulldata <- matrix(rnorm(ns[nind]*ps[pind],0,1),nrow=ps[pind],ncol=ns[nind],byrow=FALSE) # 5 variates with 1000 time points, no change
-      empirical_penalties[i] = wbs_penaltyfinder(mynulldata, SUBSET.normal_penalty, 100)
-    }
+    
+    empirical_penalties = sort(empirical_penalties,decreasing = TRUE)
+    
+    
+    rez[[1]] = cc[[1]] #FAST threshoolds
+    rez[[2]] = cc[[2]] #FAST thresholds
+    rez[[3]] = cc2[[1]] #Inspect xi
+    rez[[4]] = cc3[[1]] # pilliat
+    rez[[5]] = cc3[[2]] # pilliat
+    rez[[6]] = cc3[[3]] # pilliat
+    rez[[7]] = ns[nind]
+    rez[[8]] = ps[pind]
+    rez[[9]] = empirical_penalties[max(1,round(tol*Ncal))] # subset penalty
+    rez[[10]] = cc4[[1]] #FAST threshoolds
+    rez[[11]] = cc4[[2]] #FAST thresholds
+    rez
+    #calibrates[[z+1]] = rez
+    
   }
+  close(pb)
+  stopCluster(cl)
   
-  empirical_penalties = sort(empirical_penalties,decreasing = TRUE)
-  
-  
-  rez[[1]] = cc[[1]] #FAST threshoolds
-  rez[[2]] = cc[[2]] #FAST thresholds
-  rez[[3]] = cc2[[1]] #Inspect xi
-  rez[[4]] = cc3[[1]] # pilliat
-  rez[[5]] = cc3[[2]] # pilliat
-  rez[[6]] = cc3[[3]] # pilliat
-  rez[[7]] = ns[nind]
-  rez[[8]] = ps[pind]
-  rez[[9]] = empirical_penalties[max(1,round(tol*Ncal))] # subset penalty
-  rez[[10]] = cc4[[1]] #FAST threshoolds
-  rez[[11]] = cc4[[2]] #FAST thresholds
-  rez
-  #calibrates[[z+1]] = rez
-  
+  saveRDS(calibrates, file=sprintf("%s/calibrates.RDA", savedir))
 }
-close(pb)
-stopCluster(cl)
 
 
 
-numconfig = 7
+numconfig = 12
 config = function(i,n,p){
   #mus = matrix(0, nrow=p, ncol=n)
   mus = matrix(0, nrow=p, ncol=n)
@@ -135,66 +142,132 @@ config = function(i,n,p){
   etas = c()
   sparsities = c()
   sparsity = c()
+  if (i<=10){
+    sparsity="Mixed"
+    etas = sort(sample(1:(n-1), 5))
+    sparsities = sample(c(1,2), length(etas), replace=TRUE)
+    for (j in 1:length(etas)) {
+      Delta = 1
+      if(j==1){
+        Delta = min(etas[1], etas[2]-etas[1])
+      }else if(j<length(etas)){
+        Delta = min(etas[j] - etas[j-1], etas[j+1] - etas[j])
+      }else{
+        Delta = min(etas[j]-etas[j-1], n -etas[j])
+      }
+      if(sparsities[j]==1){
+        # sparse
+        sparsities[j] = sample(1:floor(sqrt(p*log(n))),1)
+        k = sparsities[j]
+        phi = sparse_const/sqrt(Delta)*sqrt((c(k*log(exp(1)*p*log(n)/k^2)+ log(n))))
+      }else{
+        #dense
+        sparsities[j] = sample(ceiling(sqrt(p*log(n))):p,1)
+        k = sparsities[j]
+        phi = dense_const/sqrt(Delta)*(p*log(n))^(1/4)
+      }
+      coords = sample(1:p, sparsities[j])
+      #diff = runif(k)*sample(c(-1,1), sparsities[j], replace=TRUE)
+      diff = sample(c(-1,1), sparsities[j], replace=TRUE)
+      diff = diff/norm(diff, type="2")
+      mus[coords, (etas[j]+1):n] = mus[coords, (etas[j]+1):n] +matrix(rep(diff*phi, n-etas[j]), nrow = length(coords))
+    }
+  }
+  
   
   if(i==1){
-    # no chgppts
-  }
-  else if(i==2){
-    # 2 dense
-    sparsity="Dense"
-    etas = sort(sample(1:(n-1), 2))
-    sparsities = sample(ceiling(sqrt(p*log(n))):p,length(etas), replace=TRUE)
+    #everything good
+    noise = matrix(rnorm(n*p), nrow=p, ncol=n)
     
-    for (j in 1:length(etas)) {
-      Delta = 1
-      if(j==1){
-        Delta = min(etas[1], etas[2]-etas[1])
-      }else if(j<length(etas)){
-        Delta = min(etas[j] - etas[j-1], etas[j+1] - etas[j])
-      }else{
-        Delta = min(etas[j]-etas[j-1], n -etas[j])
-      }
-      phi = dense_const/sqrt(Delta)*(p*log(n))^(1/4)
-      k = sparsities[j]
-      coords = sample(1:p, sparsities[j]) 
-      #diff = runif(k) *sample(c(-1,1), sparsities[j], replace=TRUE)
-      diff = sample(c(-1,1), sparsities[j], replace=TRUE)
-      diff = diff/norm(diff, type="2")
-      mus[coords, (etas[j]+1):n] = mus[coords, (etas[j]+1):n] + matrix(rep(diff*phi, n-etas[j]), nrow = length(coords))
+    
+  }
+  
+  if(i==2){
+    #uniform
+    noise = matrix(runif(n*p,min=-sqrt(3), max=sqrt(3)), nrow=p, ncol=n)
+    
+    
+  }
+  
+  if(i==3){
+    #student t
+    noise = matrix(rt(n*p,df=3), nrow=p, ncol=n)/sqrt(3)
+    
+    
+  }
+  
+  if(i==4){
+    #heavy tailed
+    #noise = matrix(rcauchy(n*p),nrow=p,ncol=n)
+    noise = matrix(rt(n*p,df=10), nrow=p, ncol=n)*sqrt(8/10)
+    
+  }
+  
+  
+  if(i==5){
+    #cs, loc 1
+    rho = 0.1
+    noise = t(mvrnorm(n = n, rep(0,p), Sigma = outer(1:p,1:p,function(a,b){rho^(abs(a-b))}), tol = 1e-6))
+    
+    
+  }
+  
+  if(i==6){
+    #cs, loc 2
+    rho = 0.4
+    noise = t(mvrnorm(n = n, rep(0,p), Sigma = outer(1:p,1:p,function(a,b){rho^(abs(a-b))}), tol = 1e-6))
+    
+    
+  }
+  
+  if(i==7){
+    #cs 1
+    rho = 0.1
+    noise = t(mvrnorm(n, mu = rep(0,p), Sigma = matrix(rho,p,p)+diag(p)*(1-rho)))
+    
+  }
+  
+  if(i==8){
+    #cs 2
+    rho = 0.4
+    noise = t(mvrnorm(n, mu = rep(0,p), Sigma = matrix(rho,p,p)+diag(p)*(1-rho)))
+    
+  }
+  
+  if(i==9){
+    #temp 1
+    rho = 0.1
+    noise = matrix(0,p,n)
+    noise[,1] = rnorm(p)
+    for (j in 1:p){
+      for (t in 2:n) noise[j,t] = noise[j,t-1]*sqrt(rho) + rnorm(1)*sqrt(1-rho)
     }
     
+    
   }
-  else if(i==3){
-    # 2 sparse
-    sparsity = "Sparse"
-    etas = sort(sample(1:(n-1), 2))
-    sparsities = sample(1:floor(sqrt(p*log(n))),length(etas), replace=TRUE )
-    
-    
-    for (j in 1:length(etas)) {
-      Delta = 1
-      if(j==1){
-        Delta = min(etas[1], etas[2]-etas[1])
-      }else if(j<length(etas)){
-        Delta = min(etas[j] - etas[j-1], etas[j+1] - etas[j])
-      }else{
-        Delta = min(etas[j]-etas[j-1], n -etas[j])
-      }
-      k = sparsities[j]
-      phi = sparse_const/sqrt(Delta)*sqrt((c(k*log(exp(1)*p*log(n)/k^2)+ log(n))))
-      coords = sample(1:p, sparsities[j])
-      #diff = runif(k)*sample(c(-1,1), sparsities[j], replace=TRUE)
-      diff = sample(c(-1,1), sparsities[j], replace=TRUE)
-      diff = diff/norm(diff, type="2")
-      mus[coords, (etas[j]+1):n] = mus[coords, (etas[j]+1):n] +matrix(rep(diff*phi, n-etas[j]), nrow = length(coords))
+  
+  if(i==10){
+    #temp 2
+    rho = 0.4
+    noise = matrix(0,p,n)
+    noise[,1] = rnorm(p)
+    for (j in 1:p){
+      for (t in 2:n) noise[j,t] = noise[j,t-1]*sqrt(rho) + rnorm(1)*sqrt(1-rho)
     }
-    
   }
-  else if(i==4){
-    # 2 mixed
+  
+  if(i==11){
+    #async 
+    noise = matrix(rnorm(n*p), nrow=p, ncol=n)
+    
+    #sparsity="Mixed"
+    #etas = sort(sample(1:(n-1), round(n/3)))
+    #sparsities = sample(c(1,2), round(n/3), replace=TRUE)
     sparsity="Mixed"
-    etas = sort(sample(1:(n-1), 2))
+    etas = sort(sample(1:(n-1), 5))
     sparsities = sample(c(1,2), length(etas), replace=TRUE)
+    mus = matrix(0, nrow=p, ncol=n)
+    k = 0
     for (j in 1:length(etas)) {
       Delta = 1
       if(j==1){
@@ -206,77 +279,46 @@ config = function(i,n,p){
       }
       if(sparsities[j]==1){
         # sparse
-        sparsities[j] = sample(1:floor(sqrt(p*log(n))),1)
+        sparsities[j] = sample(1:floor(sqrt(p*log(n^4))),1)
         k = sparsities[j]
-        phi = sparse_const/sqrt(Delta)*sqrt((c(k*log(exp(1)*p*log(n)/k^2)+ log(n))))
+        phi = sparse_const/sqrt(Delta)*sqrt((c(k*log(exp(1)*p*log(n^4)/k^2)+ log(n^4))))
       }else{
         #dense
-        sparsities[j] = sample(ceiling(sqrt(p*log(n))):p,1)
+        sparsities[j] = sample(ceiling(sqrt(p*log(n^4))):p,1)
         k = sparsities[j]
-        phi = dense_const/sqrt(Delta)*(p*log(n))^(1/4)
+        phi = dense_const/sqrt(Delta)*(p*log(n^4))^(1/4)
       }
       coords = sample(1:p, sparsities[j])
-      #diff = runif(k)*sample(c(-1,1), sparsities[j], replace=TRUE)
       diff = sample(c(-1,1), sparsities[j], replace=TRUE)
       diff = diff/norm(diff, type="2")
-      mus[coords, (etas[j]+1):n] = mus[coords, (etas[j]+1):n] +matrix(rep(diff*phi, n-etas[j]), nrow = length(coords))
-    }
-    
-  }
-  else if(i==5){
-    # 5 dense
-    sparsity="Dense"
-    etas = sort(sample(1:(n-1), 5))
-    sparsities = sample(ceiling(sqrt(p*log(n))):p,length(etas), replace=TRUE)
-    
-    for (j in 1:length(etas)) {
-      Delta = 1
-      if(j==1){
-        Delta = min(etas[1], etas[2]-etas[1])
-      }else if(j<length(etas)){
-        Delta = min(etas[j] - etas[j-1], etas[j+1] - etas[j])
-      }else{
-        Delta = min(etas[j]-etas[j-1], n -etas[j])
+      L = round(Delta/2)
+      
+      for (zz in 1:length(coords)) {
+        start = sample(seq(etas[j]-L,etas[j]+L ),1)
+        coord = coords[zz]
+        mus[coord, start:n] = mus[coord, start:n] +diff[coord]*phi
       }
-      phi = dense_const/sqrt(Delta)*(p*log(n))^(1/4)
-      k = sparsities[j]
-      coords = sample(1:p, sparsities[j]) 
-      #diff = runif(k) *sample(c(-1,1), sparsities[j], replace=TRUE)
-      diff = sample(c(-1,1), sparsities[j], replace=TRUE)
-      diff = diff/norm(diff, type="2")
-      mus[coords, (etas[j]+1):n] = mus[coords, (etas[j]+1):n] + matrix(rep(diff*phi, n-etas[j]), nrow = length(coords))
+      
     }
-  }
-  else if(i==6){
-    # 5 sparse
-    sparsity = "Sparse"
-    etas = sort(sample(1:(n-1), 5))
-    sparsities = sample(1:floor(sqrt(p*log(n))),length(etas), replace=TRUE )
     
     
-    for (j in 1:length(etas)) {
-      Delta = 1
-      if(j==1){
-        Delta = min(etas[1], etas[2]-etas[1])
-      }else if(j<length(etas)){
-        Delta = min(etas[j] - etas[j-1], etas[j+1] - etas[j])
-      }else{
-        Delta = min(etas[j]-etas[j-1], n -etas[j])
-      }
-      k = sparsities[j]
-      phi = sparse_const/sqrt(Delta)*sqrt((c(k*log(exp(1)*p*log(n)/k^2)+ log(n))))
-      coords = sample(1:p, sparsities[j])
-      #diff = runif(k)*sample(c(-1,1), sparsities[j], replace=TRUE)
-      diff = sample(c(-1,1), sparsities[j], replace=TRUE)
-      diff = diff/norm(diff, type="2")
-      mus[coords, (etas[j]+1):n] = mus[coords, (etas[j]+1):n] +matrix(rep(diff*phi, n-etas[j]), nrow = length(coords))
-    }
+    
+    
+    
   }
-  else if(i==7){
-    # 5 mixed
+  
+  if(i==12){
+    #gradual
+    noise = matrix(rnorm(n*p), nrow=p, ncol=n)
+    #chgpt
+    #sparsity="Mixed"
+    #etas = sort(sample(1:(n-1), round(n/3)))
+    #sparsities = sample(c(1,2), round(n/3), replace=TRUE)
     sparsity="Mixed"
     etas = sort(sample(1:(n-1), 5))
     sparsities = sample(c(1,2), length(etas), replace=TRUE)
+    mus = matrix(0, nrow=p, ncol=n)
+    k=0
     for (j in 1:length(etas)) {
       Delta = 1
       if(j==1){
@@ -288,23 +330,38 @@ config = function(i,n,p){
       }
       if(sparsities[j]==1){
         # sparse
-        sparsities[j] = sample(1:floor(sqrt(p*log(n))),1)
+        sparsities[j] = sample(1:floor(sqrt(p*log(n^4))),1)
         k = sparsities[j]
-        phi = sparse_const/sqrt(Delta)*sqrt((c(k*log(exp(1)*p*log(n)/k^2)+ log(n))))
+        phi = sparse_const/sqrt(Delta)*sqrt((c(k*log(exp(1)*p*log(n^4)/k^2)+ log(n^4))))
       }else{
         #dense
-        sparsities[j] = sample(ceiling(sqrt(p*log(n))):p,1)
+        sparsities[j] = sample(ceiling(sqrt(p*log(n^4))):p,1)
         k = sparsities[j]
-        phi = dense_const/sqrt(Delta)*(p*log(n))^(1/4)
+        phi = dense_const/sqrt(Delta)*(p*log(n^4))^(1/4)
       }
       coords = sample(1:p, sparsities[j])
-      #diff = runif(k)*sample(c(-1,1), sparsities[j], replace=TRUE)
       diff = sample(c(-1,1), sparsities[j], replace=TRUE)
       diff = diff/norm(diff, type="2")
-      mus[coords, (etas[j]+1):n] = mus[coords, (etas[j]+1):n] +matrix(rep(diff*phi, n-etas[j]), nrow = length(coords))
+      
+      for (zz in 1:length(coords)) {
+        start = etas[j]
+        stop = n
+        if(j<length(etas)){
+          stop = etas[j+1]
+        }
+        coord = coords[zz]
+        mus[coord, start:stop] = mus[coord, start:stop] +diff[coord]*phi*(1:(stop-start+1))/(stop-start+1)
+        if(j<length(etas)){
+          mus[coord, (stop+1):n]= mus[coord, (stop+1):n]+diff[coord]*phi
+        }
+      }
+      
     }
+    
   }
-  return(list(etas, sparsities,mus,sparsity))
+  
+  X = mus + noise
+  return(list(etas, sparsities,mus, X,sparsity,noise))
 }
 
 
@@ -320,184 +377,194 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
   set.seed(2*z)
   library(HDCD)
   library(hdbinseg)
+  library(InspectChangepoint)
+  library(MASS)
   counter = 1
-  source("/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/HDCD/SUBSET/main.R")
+  source("/Users/peraugust/Library/CloudStorage/OneDrive-UniversitetetiOslo/project1/simulations/HDCD/SUBSET/main.R")
   
-  for (i in 1:length(ns)) {
-    n = ns[i]
-    for(j in 1:length(ps)){
-      p = ps[j]
-      
-      for (y in 1:numconfig) {
-        noise = matrix(rnorm(n*p), nrow=p, ncol=n)
-        conf = config(y, n, p)
-        etas = conf[[1]]
-        sparsities = conf[[2]]
-        mus = conf[[3]]
-        
-        X = noise + mus
-        
-        
-        rezi = list()
-        rezi[["i"]] = i
-        rezi[["j"]] = j
-        rezi[["y"]] = y
-        
-        # hdcd_fast
-        #xi = 4*sqrt(log(p*n))
-        #lambda = sqrt(log(p*log(n)))
-        lambda = sqrt(log(p*log(n))/2)
-        
-        
-        a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[2]], droppartialsum = FALSE, fast =TRUE,
-                    rescale_variance = rescale_variance, debug= FALSE)
-        b=proc.time()
-        rezi[["hdcd_fast_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["hdcd_fast_K"]]= res$changepointnumber
-        rezi[["hdcd_fast_chgpts"]]= res$changepoints
-        rezi[["hdcd_fast_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["hdcd_fast_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["hdcd_fast_ari"]] = ARI(etas, res$changepoints, n)
-        
-        a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 5, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[10]], droppartialsum = TRUE, fast =FALSE,
-                    rescale_variance = rescale_variance, debug= FALSE)
-        b=proc.time()
-        rezi[["hdcd_long_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["hdcd_long_K"]]= res$changepointnumber
-        rezi[["hdcd_long_chgpts"]]= res$changepoints
-        rezi[["hdcd_long_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["hdcd_long_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["hdcd_long_ari"]] = ARI(etas, res$changepoints, n)
-        # hdcd
-        
-        # slow FAST:
-        # a = proc.time()
-        # res  = HDCD (X, 2,2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[4]] , droppartialsum = FALSE, fast =FALSE,debug= FALSE)
-        # b=proc.time()
-        #
-        # rezi[["hdcd_time"]] = (b-a)[1]+(b-a)[2]
-        # rezi[["hdcd_K"]] = res$changepointnumber
-        # rezi[["hdcd_chgpts"]]= res$changepoints
-        # rezi[["hdcd_hausd"]] = hausdorff(res$changepoints, etas,n)
-        # rezi[["hdcd_K_error"]] = length(res$changepoints) - length(etas)
-        # rezi[["hdcd_ari"]] = ARI(etas, res$changepoints, n)
-        #
-        # hdcd slow
-        # if(dim(X)[2]>500){
-        #   rezi[["pilliat_time"]] = NA
-        #   rezi[["pilliat_K"]] = NA
-        #   rezi[["pilliat_chgpts"]]= NA
-        #   rezi[["pilliat_hausd"]] = NA
-        #   rezi[["pilliat_K_error"]] = NA
-        #   rezi[["pilliat_ari"]] = NA
-        # }
-        # else{
-        #a = proc.time()
-        #res = HDCD (X, 2,2, alpha = 1+1/6, K = 4, threshold_d_test = 1.5,
-        #            threshold_s_test = 1.5, droppartialsum = FALSE, fast =FALSE,debug= FALSE)
-        #b=proc.time()
-        
-        a = proc.time()
-        res  = Pilliat(X[,], K = 4, alpha = 2, empirical = TRUE, threshold_dense = (calibrates[[j+(i-1)*length(ps)]])[[5]],
-                       thresholds_partial = (calibrates[[j+(i-1)*length(ps)]])[[4]], thresholds_bj = (calibrates[[j+(i-1)*length(ps)]])[[6]],
-                       rescale_variance = rescale_variance, debug =FALSE)
-        b=proc.time()
-        print(res)
-        
-        rezi[["pilliat_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["pilliat_K"]] = res$changepointnumber
-        rezi[["pilliat_chgpts"]]= res$changepoints
-        rezi[["pilliat_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["pilliat_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["pilliat_ari"]] = ARI(etas, res$changepoints, n)
-        #}
-        
-        
-        #inspect
-        a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = Inspect(X[,], xi=(calibrates[[j+(i-1)*length(ps)]])[[3]], alpha = 2, K = 4,eps=1e-10,
-                      lambda = lambda, maxiter=10000,
-                      rescale_variance = rescale_variance, debug=FALSE)
-        b=proc.time()
-        rezi[["inspect_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["inspect_K"]]= res$changepointnumber
-        rezi[["inspect_chgpts"]]= res$changepoints
-        rezi[["inspect_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["inspect_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["inspect_ari"]] = ARI(etas, res$changepoints, n)
-        
-        
-        
-        # subset
-        a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        if(rescale_variance){
-          res = change_main(InspectChangepoint::rescale.variance(X), SUBSET.normal, 100,penalties= (calibrates[[j+(i-1)*length(ps)]])[[9]])
-        }else{
-          res = change_main(X, SUBSET.normal,100, penalties=(calibrates[[j+(i-1)*length(ps)]])[[9]])
-        }
-        b=proc.time()
-        rezi[["subset_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["subset_K"]]= length(res[[2]])
-        rezi[["subset_chgpts"]]= sort(res[[2]])
-        rezi[["subset_hausd"]] = hausdorff(sort(res[[2]]), etas,n)
-        rezi[["subset_K_error"]] = length(res[[2]]) - length(etas)
-        rezi[["subset_ari"]] = ARI(etas, sort(res[[2]]), n)
-        
-        
-        
-        # SBS
-        a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = sbs.alg(X[,], cp.type = 1, thr = NULL, trim = NULL, height = NULL,
-                      temporal = TRUE, scales = NULL, diag = FALSE, B = 100, q = 0.01,
-                      do.parallel = 1)
-        b=proc.time()
-        if(length(res$ecp)==0){
-          res$ecp = NULL
-        }
-        rezi[["sbs_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["sbs_K"]]= length(res$ecp)
-        rezi[["sbs_chgpts"]]= sort(res$ecp)
-        rezi[["sbs_hausd"]] = hausdorff(sort(res$ecp), etas,n)
-        rezi[["sbs_K_error"]] = length(res$ecp) - length(etas)
-        rezi[["sbs_ari"]] = ARI(etas, sort(res$ecp), n)
-        
-        # DC
-        a = proc.time()
-        res = dcbs.alg(X[,], cp.type = 1, phi = 0.5, thr = NULL, trim = NULL,
-                       height = NULL, temporal = TRUE, scales = NULL, diag = FALSE,
-                       B = 100, q = 0.01, do.parallel = 1)
-        b=proc.time()
-        if(length(res$ecp)==0){
-          res$ecp = NULL
-        }
-        rezi[["dc_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["dc_K"]]= length(res$ecp)
-        rezi[["dc_chgpts"]]= sort(res$ecp)
-        rezi[["dc_hausd"]] = hausdorff(sort(res$ecp), etas,n)
-        rezi[["dc_K_error"]] = length(res$ecp) - length(etas)
-        rezi[["dc_ari"]] = ARI(etas, sort(res$ecp), n)
-        
-        rezi[["hehe"]] = res
-        
-        
-        rezi[["true_K"]] = length(etas)
-        rezi[["true_etas"]] = etas
-        rezi[["true_sparsities"]] = sparsities
-        
-        rez[[counter]] = rezi
-        counter = counter+1
-        
-        
-        
-      }
+  
+  n = ns[1]
+    
+  p = ps[1]
+    
+  i = 1
+  j = 1
+  
+  ii = 1
+  jj = 2
+  for (y in 1:numconfig) {
+    noise = matrix(rnorm(n*p), nrow=p, ncol=n)
+    conf = config(y, n, p)
+    etas = conf[[1]]
+    sparsities = conf[[2]]
+    mus = conf[[3]]
+    #list(etas, sparsities,mus, X,sparsity,noise)
+    
+    #X = noise + mus
+    X = conf[[4]]
+    
+    
+    rezi = list()
+    rezi[["i"]] = i
+    rezi[["j"]] = j
+    rezi[["y"]] = y
+    
+    # hdcd_fast
+    #xi = 4*sqrt(log(p*n))
+    #lambda = sqrt(log(p*log(n)))
+    lambda = sqrt(log(p*log(n))/2)
+    
+    
+    a = proc.time()
+    #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+    res = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[jj+(i-1)*length(ps)]])[[2]], droppartialsum = FALSE, fast =TRUE,
+                rescale_variance = rescale_variance, debug= FALSE)
+    b=proc.time()
+    rezi[["hdcd_fast_time"]] = (b-a)[1]+(b-a)[2]
+    rezi[["hdcd_fast_K"]]= res$changepointnumber
+    rezi[["hdcd_fast_chgpts"]]= res$changepoints
+    rezi[["hdcd_fast_hausd"]] = hausdorff(res$changepoints, etas,n)
+    rezi[["hdcd_fast_K_error"]] = length(res$changepoints) - length(etas)
+    rezi[["hdcd_fast_ari"]] = ARI(etas, res$changepoints, n)
+    
+    a = proc.time()
+    #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+    res = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 5, thresholds_test = (calibrates[[jj+(i-1)*length(ps)]])[[10]], droppartialsum = TRUE, fast =FALSE,
+                rescale_variance = rescale_variance, debug= FALSE)
+    b=proc.time()
+    rezi[["hdcd_long_time"]] = (b-a)[1]+(b-a)[2]
+    rezi[["hdcd_long_K"]]= res$changepointnumber
+    rezi[["hdcd_long_chgpts"]]= res$changepoints
+    rezi[["hdcd_long_hausd"]] = hausdorff(res$changepoints, etas,n)
+    rezi[["hdcd_long_K_error"]] = length(res$changepoints) - length(etas)
+    rezi[["hdcd_long_ari"]] = ARI(etas, res$changepoints, n)
+    # hdcd
+    
+    # slow FAST:
+    # a = proc.time()
+    # res  = HDCD (X, 2,2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[4]] , droppartialsum = FALSE, fast =FALSE,debug= FALSE)
+    # b=proc.time()
+    #
+    # rezi[["hdcd_time"]] = (b-a)[1]+(b-a)[2]
+    # rezi[["hdcd_K"]] = res$changepointnumber
+    # rezi[["hdcd_chgpts"]]= res$changepoints
+    # rezi[["hdcd_hausd"]] = hausdorff(res$changepoints, etas,n)
+    # rezi[["hdcd_K_error"]] = length(res$changepoints) - length(etas)
+    # rezi[["hdcd_ari"]] = ARI(etas, res$changepoints, n)
+    #
+    # hdcd slow
+    # if(dim(X)[2]>500){
+    #   rezi[["pilliat_time"]] = NA
+    #   rezi[["pilliat_K"]] = NA
+    #   rezi[["pilliat_chgpts"]]= NA
+    #   rezi[["pilliat_hausd"]] = NA
+    #   rezi[["pilliat_K_error"]] = NA
+    #   rezi[["pilliat_ari"]] = NA
+    # }
+    # else{
+    #a = proc.time()
+    #res = HDCD (X, 2,2, alpha = 1+1/6, K = 4, threshold_d_test = 1.5,
+    #            threshold_s_test = 1.5, droppartialsum = FALSE, fast =FALSE,debug= FALSE)
+    #b=proc.time()
+    
+    a = proc.time()
+    res  = Pilliat(X, K = 4, alpha = 2, empirical = TRUE, threshold_dense = (calibrates[[jj+(i-1)*length(ps)]])[[5]],
+                   thresholds_partial = (calibrates[[jj+(i-1)*length(ps)]])[[4]], thresholds_bj = (calibrates[[jj+(i-1)*length(ps)]])[[6]],
+                   rescale_variance = rescale_variance, debug =FALSE)
+    b=proc.time()
+    #print(res)
+    
+    rezi[["pilliat_time"]] = (b-a)[1]+(b-a)[2]
+    rezi[["pilliat_K"]] = res$changepointnumber
+    rezi[["pilliat_chgpts"]]= res$changepoints
+    rezi[["pilliat_hausd"]] = hausdorff(res$changepoints, etas,n)
+    rezi[["pilliat_K_error"]] = length(res$changepoints) - length(etas)
+    rezi[["pilliat_ari"]] = ARI(etas, res$changepoints, n)
+    #}
+    
+    
+    #inspect
+    a = proc.time()
+    #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+    res = Inspect(X[,], xi=(calibrates[[jj+(i-1)*length(ps)]])[[3]], alpha = 2, K = 4,eps=1e-10,
+                  lambda = lambda, maxiter=10000,
+                  rescale_variance = rescale_variance, debug=FALSE)
+    b=proc.time()
+    rezi[["inspect_time"]] = (b-a)[1]+(b-a)[2]
+    rezi[["inspect_K"]]= res$changepointnumber
+    rezi[["inspect_chgpts"]]= res$changepoints
+    rezi[["inspect_hausd"]] = hausdorff(res$changepoints, etas,n)
+    rezi[["inspect_K_error"]] = length(res$changepoints) - length(etas)
+    rezi[["inspect_ari"]] = ARI(etas, res$changepoints, n)
+    
+    
+    
+    # subset
+    a = proc.time()
+    #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+    if(rescale_variance){
+      res = change_main(InspectChangepoint::rescale.variance(X), SUBSET.normal, 100,penalties= (calibrates[[jj+(i-1)*length(ps)]])[[9]])
+    }else{
+      res = change_main(X, SUBSET.normal,100, penalties=(calibrates[[jj+(i-1)*length(ps)]])[[9]])
     }
+    b=proc.time()
+    rezi[["subset_time"]] = (b-a)[1]+(b-a)[2]
+    rezi[["subset_K"]]= length(res[[2]])
+    rezi[["subset_chgpts"]]= sort(res[[2]])
+    rezi[["subset_hausd"]] = hausdorff(sort(res[[2]]), etas,n)
+    rezi[["subset_K_error"]] = length(res[[2]]) - length(etas)
+    rezi[["subset_ari"]] = ARI(etas, sort(res[[2]]), n)
+    
+    
+    
+    # SBS
+    #encounters error...
+    a = proc.time()
+    #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+    #res = sbs.alg(X[,], cp.type = 1, thr = NULL, trim = NULL, height = log(n, 2),
+     #             temporal = TRUE, scales = NULL, diag = FALSE, B = 100, q = 0.01,
+    #              do.parallel = 1)
+    b=proc.time()
+    if(length(res$ecp)==0){
+      res$ecp = NULL
+    }
+    rezi[["sbs_time"]] = (b-a)[1]+(b-a)[2]
+    rezi[["sbs_K"]]= length(res$ecp)
+    rezi[["sbs_chgpts"]]= sort(res$ecp)
+    rezi[["sbs_hausd"]] = hausdorff(sort(res$ecp), etas,n)
+    rezi[["sbs_K_error"]] = length(res$ecp) - length(etas)
+    rezi[["sbs_ari"]] = ARI(etas, sort(res$ecp), n)
+    
+    # DC
+    # encounters error......
+    a = proc.time()
+    #res = dcbs.alg(X[,], cp.type = 1, phi = 0.5, thr = NULL, trim = NULL,
+    #               height = NULL, temporal = TRUE, scales = NULL, diag = FALSE,
+    #               B = 100, q = 0.01, do.parallel = 1)
+    b=proc.time()
+    if(length(res$ecp)==0){
+      res$ecp = NULL
+    }
+    rezi[["dc_time"]] = (b-a)[1]+(b-a)[2]
+    rezi[["dc_K"]]= length(res$ecp)
+    rezi[["dc_chgpts"]]= sort(res$ecp)
+    rezi[["dc_hausd"]] = hausdorff(sort(res$ecp), etas,n)
+    rezi[["dc_K_error"]] = length(res$ecp) - length(etas)
+    rezi[["dc_ari"]] = ARI(etas, sort(res$ecp), n)
+    
+    rezi[["hehe"]] = res
+    
+    
+    rezi[["true_K"]] = length(etas)
+    rezi[["true_etas"]] = etas
+    rezi[["true_sparsities"]] = sparsities
+    
+    rez[[counter]] = rezi
+    counter = counter+1
+    
+    
+    
+
   }
   rez
 }
@@ -773,16 +840,3 @@ if(save){
   close(texfile)
   
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

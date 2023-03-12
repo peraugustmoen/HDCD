@@ -1,19 +1,19 @@
 library(HDCD)
 
 #multiple change-points:
-p = 10000
-n =20
+p = 100
+n =40
 mus = matrix(0, nrow=p, ncol=n)
 noise = matrix(rnorm(n*p), nrow=p, ncol=n)
 etas = c(round(n/4),round(2*n/4),round(3*n/4))
 randomdense =rnorm(p)
 randomdense = randomdense/norm(randomdense,type="2")*sqrt(p)
 randomdense = randomdense/p^(1/4)/sqrt(n)*12
-k = 23
+k = 1
 mus[,round(etas[1]+1):n] = mus[,round(etas[1]+1):n] + sqrt(2*max(log(exp(1)*p*log(n)/k^2), log(n)))*matrix(rep(c(rep(1,k)*1/sqrt(n)*10, rep(0,p-k)), n-round(etas[1])) ,nrow=p)
 mus[,round(etas[2]+1):n] = mus[,round(etas[2]+1):n] + matrix(rep(randomdense, n-round(etas[2])) ,nrow=p)*1.2
 mus[,round(etas[3]+1):n] = mus[,round(etas[3]+1):n] + matrix(rep(rep(1,p)/p^(1/4)/sqrt(n)*12, n-round(etas[3])) ,nrow=p)*1.2
-mus = mus/1.5
+mus = mus/1.3
 plot(mus[1,])
 X = mus+noise
 plot(X[1,])
@@ -24,8 +24,17 @@ res2 = HDCD (X[,], 1.5,1, alpha = 1+1/6, K = 7, threshold_d_test = 2, fast =TRUE
              threshold_s_test = 1,rescale_variance = rescale_variance, debug= TRUE)
 res2$changepoints
 
-res3 = HDCD (X[,], 2,1, alpha = 2, K = 4, threshold_d_test = 2, fast =FALSE,droppartialsum =FALSE,
+
+# res2 = HDCD (X[,], 1.5,1, alpha = 1+1/6, K = 7, threshold_d_test = 2, fast =TRUE,droppartialsum = TRUE,
+#              threshold_s_test = 1,rescale_variance = rescale_variance, NOT = FALSE,debug= FALSE)
+# res2$changepoints
+
+res3 = HDCD (X[,], 1.5,1, alpha = 1.2, K = 4, threshold_d_test = 2, fast =FALSE,droppartialsum =TRUE,
              threshold_s_test = 1,rescale_variance = rescale_variance, debug= TRUE)
+res3$changepoints
+
+res3 = HDCD (X[,], 1.5,1, alpha = 1.2, K = 4, threshold_d_test = 2, fast =FALSE,droppartialsum =TRUE,
+             threshold_s_test = 1,rescale_variance = rescale_variance,trim=FALSE, midpoint=TRUE,debug= FALSE)
 res3$changepoints
 #X[2,] = 10*X[2,]
 
@@ -83,14 +92,14 @@ res4$endpoints
 # #res2$coordinate
 
 
-system.time({res6= Pilliat(X, threshold_d_const=2, threshold_bj_const=6, threshold_partial_const=2,
-                            K = 4, alpha = 2, debug =FALSE)})
+system.time({res6= Pilliat(X, threshold_d_const=1.5, threshold_bj_const=6, threshold_partial_const=2,
+                            K = 2, alpha = 1.5, test_all=TRUE,debug =TRUE)})
 
 
 res6$changepoints
 
 # checking empirical: 
-cc = HDCD_calibrate(n,p, N=1000, tol=0.001,alpha = 2, K = 4, fast=TRUE, 
+cc = HDCD_calibrate(n,p, N=1000, tol=0.001,alpha = 2, K = 4, fast=TRUE, bonferroni = TRUE,
                     debug=FALSE, rescale_variance = rescale_variance)
 
 system.time({res7 = HDCD (X[,], 2,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = cc[[2]], droppartialsum = FALSE, fast =TRUE,
@@ -109,26 +118,61 @@ cc2 = HDCD_calibrate(n,p, N=1000, tol=0.001,K=4,alpha = 1+1/5,fast=FALSE,
                      rescale_variance = rescale_variance, debug=FALSE)
 
 system.time({res9 = HDCD (X[,], 2,1, empirical=TRUE,alpha = 1+1/5, K = 4, 
-                          rescale_variance = rescale_variance, thresholds = cc2[[2]], droppartialsum = FALSE, fast =FALSE,debug= FALSE)})
+                          rescale_variance = rescale_variance, thresholds_test = cc2[[2]], droppartialsum = FALSE, fast =FALSE,debug= FALSE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res9$changepoints
 res9$s
 
-system.time({res10 = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 1+1/6, K = 2, thresholds = cc2[[1]], droppartialsum = TRUE, fast =FALSE,debug= FALSE)})
+system.time({res10 = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 1+1/6, K = 2, thresholds_test = cc2[[1]], droppartialsum = TRUE, fast =FALSE,
+                           rescale_variance = rescale_variance, debug= FALSE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res10$changepoints
 res10$s
 
+system.time({res101 = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 1+1/6, K = 2, thresholds_test = cc2[[1]], droppartialsum = TRUE, fast =FALSE,
+                           rescale_variance = rescale_variance, debug= FALSE, cutoff = 0.2)})
+#NOTE: 8, 2 corresponds to EQUAL PENALTIES
+res101$changepoints
+res101$s
 
-cc3 = Pilliat_calibrate(n,p, N=1000, tol=0.001,K = 4, alpha = 2,maxx = NULL, lens = NULL, debug=FALSE)
+set.seed(101)
+cc3 = Pilliat_calibrate(n,p, N=1000, tol=0.001,K = 2, alpha = 2, bonferroni =TRUE,lens = NULL, rescale_variance =rescale_variance,
+                        test_all = FALSE,debug=FALSE)
+set.seed(101)
+cc5 = Pilliat_calibrate(n,p, N=1000, tol=0.001,K = 2, alpha = 2, bonferroni = TRUE,lens = NULL, rescale_variance =rescale_variance,
+                        test_all = TRUE,debug=FALSE)
 
-system.time({res11= Pilliat(X, 
-                           K = 2, alpha = 1+1/6, empirical = TRUE, threshold_dense = cc3$threshold_dense, 
-                           thresholds_partial = cc3$thresholds_partial, thresholds_bj = cc3$thresholds_bj,debug =FALSE)})
+# #multiple change-points:
+# p = 100
+# n =100
+# mus = matrix(0, nrow=p, ncol=n)
+# noise = matrix(rnorm(n*p), nrow=p, ncol=n)
+# etas = c(round(n/4),round(2*n/4),round(3*n/4))
+# randomdense =rnorm(p)
+# randomdense = randomdense/norm(randomdense,type="2")*sqrt(p)
+# randomdense = randomdense/p^(1/4)/sqrt(n)*12
+# k = 1
+# mus[,round(etas[1]+1):n] = mus[,round(etas[1]+1):n] + sqrt(2*max(log(exp(1)*p*log(n)/k^2), log(n)))*matrix(rep(c(rep(1,k)*1/sqrt(n)*10, rep(0,p-k)), n-round(etas[1])) ,nrow=p)
+# mus[,round(etas[2]+1):n] = mus[,round(etas[2]+1):n] + matrix(rep(randomdense, n-round(etas[2])) ,nrow=p)*1.2
+# mus[,round(etas[3]+1):n] = mus[,round(etas[3]+1):n] + matrix(rep(rep(1,p)/p^(1/4)/sqrt(n)*12, n-round(etas[3])) ,nrow=p)*1.2
+# mus = mus/1.2
+# plot(mus[1,])
+# X = mus+noise
+# plot(X[1,])
+
+system.time({res11= Pilliat(X, rescale_variance = rescale_variance,
+                           K = 2, alpha =2, empirical = TRUE, threshold_dense = cc3$threshold_dense, 
+                           thresholds_partial = cc3$thresholds_partial, thresholds_bj = cc3$thresholds_bj,debug =TRUE)})
 
 
 res11$changepoints
 
+system.time({res111= Pilliat(X, rescale_variance = rescale_variance,
+                            K = 2, alpha = 2, empirical = TRUE, test_all = TRUE,threshold_dense = cc5$threshold_dense, 
+                            thresholds_partial = cc5$thresholds_partial, thresholds_bj = cc5$thresholds_bj,debug =TRUE)})
+
+
+res111$changepoints
 
 
 
@@ -359,4 +403,9 @@ res15 = sbs.alg(X, cp.type = 1, thr = NULL, trim = NULL, height = NULL,
         temporal = TRUE, scales = NULL, diag = FALSE, B = 1000, q = 0.001,
         do.parallel = 4)
 
+
+
+overlaps = function(a,b){
+  return((a[1]+1) <= (b[2]-1) && (b[1]+1) <= (a[2]-1))
+}
 

@@ -1,6 +1,6 @@
 #' @useDynLib HDCD cInspect_single
 #' @export
-single_Inspect = function(X, lambda, eps=1e-10,
+single_Inspect = function(X, lambda = sqrt(log(p*log(n))/2), eps=1e-10,
                   maxiter=10000,debug =FALSE){
   p = dim(X)[1]
   n = dim(X)[2]

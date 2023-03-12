@@ -6,3 +6,4 @@ mse_avg1 = readRDS(paste(dir, "/mse_avg1.RDA", sep=""))
 mse_avg2 = readRDS(paste(dir, "/mse_avg2.RDA", sep=""))
 mse_avg3 = readRDS(paste(dir, "/mse_avg3.RDA", sep=""))
 mse_avg4 = readRDS(paste(dir, "/mse_avg4.RDA", sep=""))
+

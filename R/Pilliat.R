@@ -4,7 +4,7 @@
 Pilliat = function(X, threshold_d_const=4, threshold_bj_const=6, threshold_partial_const=4,
                   K = 2, alpha = 1+1/6, empirical = FALSE, threshold_dense = NULL, 
                   thresholds_partial = NULL, thresholds_bj = NULL, N = 100, tol = 0.05, 
-                  rescale_variance = TRUE, debug =FALSE){
+                  rescale_variance = TRUE, test_all = FALSE,debug =FALSE){
   p = dim(X)[1]
   n = dim(X)[2]
   
@@ -63,7 +63,7 @@ Pilliat = function(X, threshold_d_const=4, threshold_bj_const=6, threshold_parti
                   lower.tail=FALSE,log.p = TRUE)
       if(debug){
         print(xx)
-        print(p0)
+        print(logp0)
         print(exp(log(2) + pnorm(xx,lower.tail = FALSE,log = TRUE)))
         print(qq)
       }
@@ -90,7 +90,7 @@ Pilliat = function(X, threshold_d_const=4, threshold_bj_const=6, threshold_parti
   res = .Call(cPilliat, X[,], as.integer(n), as.integer(p), as.numeric(thresholds_partial), 
         as.numeric(threshold_dense), as.integer( thresholds_bj),
         as.integer(lens), as.integer(length(lens)), as.integer(K), as.integer(maxx),
-        as.integer(rescale_variance), as.integer(debug))
+        as.integer(rescale_variance), as.integer(test_all),as.integer(debug))
   
   if(res$number_of_changepoints==0){
     return(list(scales = res$scales))
@@ -102,7 +102,7 @@ Pilliat = function(X, threshold_d_const=4, threshold_bj_const=6, threshold_parti
   #res$coordinate = res$coordinate[, 1:num_nonzero]
   srt_indices = as.integer(sort(res$changepoints, decreasing =FALSE, index.return=TRUE)$ix)
   res$changepoints = as.integer(res$changepoints[srt_indices])
-  res$startpoints = as.integer(res$startpoints[srt_indices])
+  res$startpoints = as.integer(res$startpoints[srt_indices])+1
   res$endpoints = as.integer(res$endpoints[srt_indices])
   res$test_stat = as.integer(res$test_stat[srt_indices])
   
@@ -110,14 +110,14 @@ Pilliat = function(X, threshold_d_const=4, threshold_bj_const=6, threshold_parti
   return(res)
 }
 #' @export
-Pilliat_calibrate = function(n,p, N=100, tol=0.05,threshold_bj_const=6,
-                                              K = 2, alpha = 1+1/6,maxx = NULL, lens = NULL, 
-                             rescale_variance = TRUE, debug=FALSE){
+Pilliat_calibrate = function(n,p, N=100, tol=0.05,bonferroni = TRUE,threshold_bj_const=6,
+                                              K = 2, alpha = 1+1/6, lens = NULL, 
+                             rescale_variance = TRUE,test_all=FALSE, debug=FALSE){
   
   log2p = floor(log(p,base=2))+1
-  if(is.null(lens) || is.null(maxx)){
-    lens = c(2)
-    last = 2
+  if(is.null(lens)){
+    lens = c(1)
+    last = 1
     tmp = last
     while(alpha*last<n){
       #while(2*last<n){
@@ -130,25 +130,34 @@ Pilliat_calibrate = function(n,p, N=100, tol=0.05,threshold_bj_const=6,
       lens= c(lens, last)
     }
     
-    
-    
-    xx = 1
-    maxx = 1
-    while(TRUE){
-      #p0 = threshold_bj_const/(pi^2*xx^2*n^2)
-      logp0 = log(threshold_bj_const) - 2*log(pi) - 2*log(xx) - 2*log(n)
-      #qq = qbinom(1/n, p, p0,lower.tail=FALSE)
-      qq = qbinom(p = logp0, size = p, prob = exp(log(2) + pnorm(xx,lower.tail = FALSE,log = TRUE)),
-                  lower.tail=FALSE,log.p = TRUE)
-      
-      if(qq==0){
-        maxx = xx-1
-        break
-      }
-      xx = xx+1
-    }
-    
   }
+  
+  if(bonferroni){
+    tol = tol/3
+    N = N*3
+  }
+  
+  thresholds_bj = c()
+  xx = 1
+  maxx = 1
+  delta = tol 
+ 
+  while(TRUE){
+    #p0 = threshold_bj_const/(pi^2*xx^2*n^2)
+    logp0 = log(6*delta) - 2*log(pi) - 2*log(xx) - 2*log(n)
+    #qq = qbinom(1/n, p, p0,lower.tail=FALSE)
+    qq = qbinom(p = logp0, size = p, prob = exp(log(2) + pnorm(xx,lower.tail = FALSE,log = TRUE)),
+                lower.tail=FALSE,log.p = TRUE)
+    if(qq==0){
+      maxx = xx-1
+      break
+    }
+    thresholds_bj = c(thresholds_bj,qq)
+    xx = xx+1
+  }
+    
+    
+  
   
   
 
@@ -159,8 +168,63 @@ Pilliat_calibrate = function(n,p, N=100, tol=0.05,threshold_bj_const=6,
   res= .Call(cPilliat_calibrate, as.integer(n), as.integer(p), as.integer(N), 
              as.integer(toln), as.integer(lens), as.integer(length(lens)), 
              as.integer(K), as.integer(maxx), as.integer(log2p),
-             as.integer(rescale_variance), as.integer(debug))
+             as.integer(rescale_variance), as.integer(test_all),as.integer(debug))
+  #print(res$thresholds_bj)
   #res[["as"]] = as
   #res[["nu_as"]] = nu_as
+  pilliatthreshinfo = Pilliat_thresholds(n,p,tol)
+  res$thresholds_bj = ceiling(max(res$thresholds_bj / thresholds_bj) * thresholds_bj)
+  
+   # print(thresholds_bj)
+    
+  
+  
+  
+  res$thresholds_partial = max(res$thresholds_partial / pilliatthreshinfo$thresholds_partial) * pilliatthreshinfo$thresholds_partial
+
   return(res)
+}
+
+
+
+
+#' @export
+Pilliat_thresholds = function(n,p,delta){
+ 
+  maxx = 0
+
+  
+  #partial norm
+  thresholds_partial = c()
+  
+  t = 1
+  while(TRUE){
+    thresholds_partial = c(thresholds_partial, t*log(2*exp(1)*p/t) + log(2*n^2))
+    t = 2*t
+    if(t>=p){
+      break
+    }
+  }
+
+  # berk jones
+  
+  thresholds_bj = c()
+  xx = 1
+  maxx = 1
+  while(TRUE){
+    #p0 = threshold_bj_const/(pi^2*xx^2*n^2)
+    logp0 = log(6*delta) - 2*log(pi) - 2*log(xx) - 2*log(n)
+    #qq = qbinom(1/n, p, p0,lower.tail=FALSE)
+    qq = qbinom(p = logp0, size = p, prob = exp(log(2) + pnorm(xx,lower.tail = FALSE,log = TRUE)),
+                lower.tail=FALSE,log.p = TRUE)
+    if(qq==0){
+      maxx = xx-1
+      break
+    }
+    thresholds_bj = c(thresholds_bj,qq)
+    xx = xx+1
+  }
+  
+
+  return(list(thresholds_partial = thresholds_partial,thresholds_bj=thresholds_bj))
 }

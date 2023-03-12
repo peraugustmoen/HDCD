@@ -93,3 +93,41 @@ Inspect_calibrate = function(n, p, N, tol,lambda = sqrt(log(p*log(n))/2) , alpha
   
   return(res)
 }
+
+
+#' @useDynLib HDCD cInspect_single
+#' @export
+Inspect_test = function(X, lambda = sqrt(log(p*log(n))/2) , xi = sqrt(log(p*log(n))/2), eps=1e-10,
+                          maxiter=10000,rescale_variance = TRUE,debug =FALSE){
+  p = dim(X)[1]
+  n = dim(X)[2]
+  
+  if(rescale_variance){
+    X = rescale_variance(X)
+  }
+  res = .Call(cInspect_single, X,as.integer(n), as.integer(p), 0,
+              eps, lambda, as.integer(maxiter), as.integer(debug))
+  
+  
+  
+  if(res$cusumval > xi){
+    return(1)
+  }else{return(0)}
+  
+}
+
+#' @useDynLib HDCD cInspect_test_calibrate
+#' @export
+Inspect_test_calibrate = function(n, p, N, tol,lambda = sqrt(log(p*log(n))/2), eps=1e-10,
+                             maxiter=10000,rescale_variance = TRUE,debug =FALSE){
+  
+  toln = max(round(N*tol),1)
+  
+  res = .Call(cInspect_test_calibrate, as.integer(n), as.integer(p), as.integer(N),
+              as.integer(toln), as.numeric(lambda), as.numeric(eps), as.integer(maxiter),
+              as.integer(rescale_variance),as.integer(debug))
+
+
+  return(res)
+}
+

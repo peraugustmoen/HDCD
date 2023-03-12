@@ -17,7 +17,7 @@ dateandtime = gsub(":", ".", dateandtime)
 savedir = file.path(maindir, dateandtime)
 
 source("/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/HDCD/SUBSET/SUBSET_normal.R")
-save = FALSE
+save = TRUE
 
 if(save){
   dir.create(savedir, showWarnings = FALSE)
@@ -35,13 +35,13 @@ kvals=4
 totruns = length(ns)*length(ps)*kvals
 
 const1 = seq(1,2, by = 0.1)
-const2 = seq(0.5,2, by = 0.1)
+const2 = seq(0.5,2.5, by = 0.1)
 
 # const1 = c(1,2)
 # const2 = c(1,2)
 
 
-N = 36*6
+N = 36*10
 num_cores = 6
 sparse_const = 2.5
 dense_const = 2.5
@@ -137,10 +137,10 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
             mat[1,cc1, cc2] = res$pos 
             res  = single_HDCD_two(X[,], const1[cc1],const2[cc2], debug =FALSE)
             mat[2,cc1, cc2] = res$pos 
-            res  = single_HDCD_three(X[,], const1[cc1],const2[cc2], debug =FALSE)
-            mat[3,cc1, cc2] = res$pos 
-            res  = single_HDCD_four(X[,], const1[cc1],const2[cc2], debug =FALSE)
-            mat[4,cc1, cc2] = res$pos 
+            # res  = single_HDCD_three(X[,], const1[cc1],const2[cc2], debug =FALSE)
+            # mat[3,cc1, cc2] = res$pos 
+            # res  = single_HDCD_four(X[,], const1[cc1],const2[cc2], debug =FALSE)
+            # mat[4,cc1, cc2] = res$pos 
             
             
           }
@@ -211,14 +211,14 @@ stopCluster(cl)
           mse3[ii, jj, yy, cc1,cc2] = mse3[ii, jj, yy, cc1,cc2] + (mat[3, cc1, cc2] - eta)^2
           mse4[ii, jj, yy, cc1,cc2] = mse4[ii, jj, yy, cc1,cc2] + (mat[4, cc1, cc2] - eta)^2
           
-          mse_avg1[cc1,cc2] = mse_avg1[cc1,cc2] + (mat[1, cc1, cc2] - eta)^2
-          mse_avg2[cc1,cc2] = mse_avg2[cc1,cc2] + (mat[2, cc1, cc2] - eta)^2
-          mse_avg3[cc1,cc2] = mse_avg3[cc1,cc2] + (mat[3, cc1, cc2] - eta)^2
-          mse_avg4[cc1,cc2] = mse_avg4[cc1,cc2] + (mat[4, cc1, cc2] - eta)^2
+          mse_avg1[cc1,cc2] = mse_avg1[cc1,cc2] + (mat[1, cc1, cc2] - eta)^2/ns[ii]
+          mse_avg2[cc1,cc2] = mse_avg2[cc1,cc2] + (mat[2, cc1, cc2] - eta)^2/ns[ii]
+          mse_avg3[cc1,cc2] = mse_avg3[cc1,cc2] + (mat[3, cc1, cc2] - eta)^2/ns[ii]
+          mse_avg4[cc1,cc2] = mse_avg4[cc1,cc2] + (mat[4, cc1, cc2] - eta)^2/ns[ii]
           
-          if(yy ==1 || yy==2 ){
-            mse_avg1[cc1,cc2] = mse_avg1[cc1,cc2] + (mat[1, cc1, cc2] - eta)^2
-          }
+          # if(yy ==1 || yy==2 ){
+          #   mse_avg1[cc1,cc2] = mse_avg1[cc1,cc2] + (mat[1, cc1, cc2] - eta)^2
+          # }
           
           est1[ii,jj,yy,cc1,cc2,zz] = mat[1, cc1, cc2]
           est2[ii,jj,yy,cc1,cc2,zz] = mat[2, cc1, cc2]
@@ -241,13 +241,34 @@ stopCluster(cl)
 }
 
 
+saveRDS(mse_avg1, file=sprintf("%s/mse_avg1.RDA", savedir))
+saveRDS(mse_avg2, file=sprintf("%s/mse_avg2.RDA", savedir))
+saveRDS(mse_avg3, file=sprintf("%s/mse_avg3.RDA", savedir))
+saveRDS(mse_avg4, file=sprintf("%s/mse_avg4.RDA", savedir))
+saveRDS(ns, file=sprintf("%s/ns.RDA", savedir))
+saveRDS(ps, file=sprintf("%s/ps.RDA", savedir))
+saveRDS(const1, file=sprintf("%s/const1.RDA", savedir))
+saveRDS(const2, file=sprintf("%s/const2.RDA", savedir))
+
+
+# mse1 minimized at i = 11, j = 14
+min(mse_avg1)
+min(mse_avg2)
+which(mse_avg1 == min(mse_avg1), arr.ind=TRUE)
+const1[5]
+const2[14]
+
+which(mse_avg2 == min(mse_avg2), arr.ind=TRUE)
+#const1[11]
+#const2[14]
 
 
 
 
 
 
-
+ggplot(data, aes(X, Y, fill= Z)) + 
+  geom_tile()
 
 
 

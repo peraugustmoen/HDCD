@@ -268,6 +268,7 @@ void CUSUM(double * cumsums, double * cusum, int s, int e, int p){
     if(e-s<2){
         return;
     }
+    //Rprintf("s = %d, e = %d\n", s,e);
     int n = e-s;
     int t;
     //printf("%f", cumsum[5]);
@@ -287,6 +288,7 @@ void CUSUM(double * cumsums, double * cusum, int s, int e, int p){
 }
 
 void singleCUSUM(double * cumsums, double * cusum, int s, int e, int p, int pos){
+    //Rprintf("Computing CUSUM at pos %d in (%d, %d]\n",pos, s, e);
     if(e-s<2){
         return;
     }
@@ -353,9 +355,62 @@ SEXP CUSUM_R(SEXP XI, SEXP sI, SEXP eI, SEXP pI, SEXP nI){
         {
             //#define cord_spec(r,c, D) ((r) + (D)*(c))
             cumsums[cord_spec(i,j,p)] = X[cord_spec(i,j-1, p)] +cumsums[cord_spec(i,j-1, p)];
+            //Rprintf("cumsum %d at j = %d = %f\n", j, i, cumsums[cord_spec(i,j,p)]);
         }
     }
     CUSUM(cumsums, cusum, s, e, p);
+    UNPROTECT(3);
+    return(cusumSEXP);
+}
+
+SEXP single_CUSUM_R(SEXP XI, SEXP sI, SEXP eI, SEXP pI, SEXP kI, SEXP nI){
+    PROTECT(XI);
+    PROTECT(sI);
+    PROTECT(eI);
+    PROTECT(pI);
+    PROTECT(kI);
+    PROTECT(nI);
+    int s = *(INTEGER(sI));
+    int p = *(INTEGER(pI));
+    int e = *(INTEGER(eI));
+    int n = *(INTEGER(nI));
+    int k = *(INTEGER(kI));
+    UNPROTECT(5);
+    double * X = REAL(XI);
+
+    SEXP cumsumsSEXP = PROTECT(allocVector(REALSXP, p * (n+1)));
+    double *cumsums = REAL(cumsumsSEXP); // p \times (n+1). first col is 0
+    //memset(cumsums, 0, p*(n+1)*sizeof(double));
+
+    SEXP cusumSEXP = PROTECT(allocVector(REALSXP, p ));
+    double *cusum = REAL(cusumSEXP); // p \times (n+1). first col is 0
+    //memset(cusum, 0, p*sizeof(double)*(n-1));
+    //
+    for (int j = 0; j <= n; ++j)
+    {
+        for (int i = 0; i < p; ++i)
+        {
+            cumsums[cord_spec(i,j,p)]=0;
+        }
+    }
+
+
+    for (int i = 0; i < p; ++i)
+    {
+        cusum[cord_spec(i,0,p)]=0;
+    }
+    
+
+
+    for (int j = 1; j <=n; ++j)
+    {
+        for (int i = 0; i < p; ++i)
+        {
+            //#define cord_spec(r,c, D) ((r) + (D)*(c))
+            cumsums[cord_spec(i,j,p)] = X[cord_spec(i,j-1, p)] +cumsums[cord_spec(i,j-1, p)];
+        }
+    }
+    singleCUSUM(cumsums, cusum, s, e, p, k);
     UNPROTECT(3);
     return(cusumSEXP);
 }
@@ -377,7 +432,7 @@ void rescale_variance(double * X, double * scales, int n, int p, double * vec){
         }
 
         // compute median
-        R_rsort(vec,n-1);
+        R_qsort(vec,1,n-1);
 
         if((n-1) % 2 ==0){
             median  = (vec[(n-1)/2] + vec[(n-1)/2-1])/2;
@@ -392,7 +447,7 @@ void rescale_variance(double * X, double * scales, int n, int p, double * vec){
             
         }
 
-        R_rsort(vec,n-1);
+        R_qsort(vec,1,n-1);
 
         if((n-1) % 2 ==0){
             scale  = MADCONST * (vec[(n-1)/2] + vec[(n-1)/2-1])/2;
@@ -403,7 +458,7 @@ void rescale_variance(double * X, double * scales, int n, int p, double * vec){
         scale = scale/sqrt(2);
         // rescale
 
-        for (int i = 0; i < (n-1); ++i)
+        for (int i = 0; i < (n); ++i)
         {
             X[cord_spec(j,i, p)] = X[cord_spec(j,i, p)] / scale;
         }
@@ -415,6 +470,56 @@ void rescale_variance(double * X, double * scales, int n, int p, double * vec){
         
 
     }
+
+}
+
+
+SEXP rescale_variance_R(SEXP XI, SEXP nI, SEXP pI, SEXP debugI){
+
+    PROTECT(XI);
+    PROTECT(nI);
+    PROTECT(pI);
+    PROTECT(debugI);
+   
+    double * X = REAL(XI);
+    int n = *(INTEGER(nI));
+    int p = *(INTEGER(pI));
+    int debug = *INTEGER(debugI);
+    
+
+
+    int maxlen = p;
+    int minlen = n;
+    if(n>p){
+        maxlen = n;
+        minlen = p;
+    }
+    SEXP vectorSEXP = PROTECT(allocVector(REALSXP, maxlen));
+    double * vector = REAL(vectorSEXP);
+    memset(vector, 0, sizeof(double)*maxlen);
+
+    SEXP scalesSEXP = PROTECT(allocVector(REALSXP, p));
+    double * scales = REAL(scalesSEXP);
+    memset(scales, 0, sizeof(double)*p);
+
+    rescale_variance(X, scales, n, p, vector);
+
+    SEXP ret = PROTECT(allocVector(VECSXP, 2)); //the list to be returned in R
+    SET_VECTOR_ELT(ret, 0, XI);
+    SET_VECTOR_ELT(ret, 1, scalesSEXP);
+
+
+    // creating list of names/titles to be returned in the output list
+    SEXP names = PROTECT(allocVector(STRSXP, 2));
+    //SET_STRING_ELT(names, 0, mkChar("CUSUM"));
+    SET_STRING_ELT(names, 0, mkChar("X"));
+    SET_STRING_ELT(names, 1, mkChar("scales"));
+
+
+
+    setAttrib(ret, R_NamesSymbol, names);
+    UNPROTECT(8);
+    return(ret);
 
 }
 
