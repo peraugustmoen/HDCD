@@ -32,32 +32,33 @@ p = 50
 set.seed(100)
 # Generating data
 X = matrix(rnorm(n*p), ncol = n, nrow=p)
-# Adding a single sparse change-point:
-X[1:5, 26:n] = X[1:5, 26:n] +1
-#'
+# Adding a single sparse change-point (at location \eta = 25):
+X[1:5, 26:n] = X[1:5, 26:n] +2
+
 # Vanilla ESAC:
 res = ESAC(X)
 res$changepoints
-#> [1] NA
-#'
+#> [1] 25
+
 # Manually setting leading constants for \lambda(t) and \gamma(t)
 res = ESAC(X,
            threshold_d = 2, threshold_s = 2, #leading constants for \lambda(t)
            threshold_d_test = 2, threshold_s_test = 2 #leading constants for \gamma(t)
 )
 res$changepoints #estimated change-point locations
-#> [1] NA
-#'
+#> [1] 25
+
 # Empirical choice of thresholds:
 res = ESAC(X, empirical = TRUE, N = 100, tol = 1/100)
 res$changepoints
-#> [1] NA
-#'
+#> [1] 25
+
+
 # Manual empirical choice of thresholds (equivalent to the above)
 thresholds_emp = ESAC_calibrate(n,p, N=100, tol=1/100)
 res = ESAC(X, thresholds_test = thresholds_emp[[1]])
 res$changepoints
-#> [1] NA
+#> [1] 25
 ```
 
 <!-- You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this. You could also use GitHub Actions to re-render `README.Rmd` every time you push. An example workflow can be found here: <https://github.com/r-lib/actions/tree/v1/examples>. -->
