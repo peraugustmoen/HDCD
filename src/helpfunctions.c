@@ -43,7 +43,7 @@ SEXP matmult(SEXP AI, SEXP BI, SEXP r1I, SEXP c1I, SEXP r2I, SEXP c2I){
     SEXP out = (allocVector(NILSXP,1));
 
     if(c1 != r2){
-        printf("matrix dims do not match");
+        Rprintf("matrix dims do not match");
         return out;
     }
 
@@ -196,7 +196,7 @@ double * internal_power_method(double * A, int n, double eps, int maxiter, doubl
         if (fabs(zum)<1e-15)
         {
             if(debug){
-                printf("ERROR IN POWERMETHOD: REACHED 0 VECTOR\n");
+                Rprintf("ERROR IN POWERMETHOD: REACHED 0 VECTOR\n");
             }
 
             return NULL;
@@ -225,7 +225,7 @@ double * internal_power_method(double * A, int n, double eps, int maxiter, doubl
         Rprintf("WARNING: power method did not converge");
     }
     if (debug) {
-        printf("num iter: %d\n", i);
+        Rprintf("num iter: %d\n", i);
     }
     //UNPROTECT(2);
     return v;

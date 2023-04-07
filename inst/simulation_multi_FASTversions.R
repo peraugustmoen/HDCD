@@ -5,7 +5,7 @@ library(HDCD)
 library(foreach)
 ## same magnitude in all coords
 
-maindir = "/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/Simulations_HDCD"
+maindir = "/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/Simulations_ESAC"
 dateandtime = gsub(" ", "--",as.character(Sys.time()))
 dateandtime = gsub(":", ".", dateandtime)
 savedir = file.path(maindir, dateandtime)
@@ -73,15 +73,15 @@ calibrates = foreach(z = 0:((length(ns)*length(ps))-1),.options.snow = opts) %do
   rez = list()
   nind = floor(z/length(ps))+1
   pind = z%%length(ps)+1
-  cc = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=4, alpha = 2, fast = TRUE,
+  cc = ESAC_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=4, alpha = 2, fast = TRUE,
                       rescale_variance = rescale_variance, debug=FALSE)
-  # cc2 = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,debug=FALSE)
+  # cc2 = ESAC_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,debug=FALSE)
   
   
-  cc2 = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=4, alpha = 2, fast = FALSE,
+  cc2 = ESAC_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=4, alpha = 2, fast = FALSE,
                       rescale_variance = rescale_variance, debug=FALSE)
   
-  cc3 = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=5, alpha = 1+1/2, fast = FALSE,
+  cc3 = ESAC_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=5, alpha = 1+1/2, fast = FALSE,
                        rescale_variance = rescale_variance, debug=FALSE)
   
   rez[[1]] = cc[[1]] #FAST threshoolds
@@ -294,7 +294,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
   library(HDCD)
   library(hdbinseg)
   counter = 1
-  source("/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/HDCD/SUBSET/main.R")
+  source("/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/ESAC/SUBSET/main.R")
   
   for (i in 1:length(ns)) {
     n = ns[i]
@@ -316,102 +316,102 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         rezi[["j"]] = j
         rezi[["y"]] = y
         
-        # hdcd_fast
+        # ESAC_fast
         #xi = 4*sqrt(log(p*n))
         #lambda = sqrt(log(p*log(n)))
         lambda = sqrt(log(p*log(n))/2)
         
         
         a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[2]], droppartialsum = FALSE, fast =TRUE,
+        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[2]], droppartialsum = FALSE, fast =TRUE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
-        rezi[["hdcd_fast_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["hdcd_fast_K"]]= res$changepointnumber
-        rezi[["hdcd_fast_chgpts"]]= res$changepoints
-        rezi[["hdcd_fast_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["hdcd_fast_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["hdcd_fast_ari"]] = ARI(etas, res$changepoints, n)
+        rezi[["ESAC_fast_time"]] = (b-a)[1]+(b-a)[2]
+        rezi[["ESAC_fast_K"]]= res$changepointnumber
+        rezi[["ESAC_fast_chgpts"]]= res$changepoints
+        rezi[["ESAC_fast_hausd"]] = hausdorff(res$changepoints, etas,n)
+        rezi[["ESAC_fast_K_error"]] = length(res$changepoints) - length(etas)
+        rezi[["ESAC_fast_ari"]] = ARI(etas, res$changepoints, n)
         
         
         
         a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[1]], droppartialsum = TRUE, fast =TRUE,
+        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[1]], droppartialsum = TRUE, fast =TRUE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
-        rezi[["hdcd_fast_np_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["hdcd_fast_np_K"]]= res$changepointnumber
-        rezi[["hdcd_fast_np_chgpts"]]= res$changepoints
-        rezi[["hdcd_fast_np_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["hdcd_fast_np_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["hdcd_fast_np_ari"]] = ARI(etas, res$changepoints, n)
+        rezi[["ESAC_fast_np_time"]] = (b-a)[1]+(b-a)[2]
+        rezi[["ESAC_fast_np_K"]]= res$changepointnumber
+        rezi[["ESAC_fast_np_chgpts"]]= res$changepoints
+        rezi[["ESAC_fast_np_hausd"]] = hausdorff(res$changepoints, etas,n)
+        rezi[["ESAC_fast_np_K_error"]] = length(res$changepoints) - length(etas)
+        rezi[["ESAC_fast_np_ari"]] = ARI(etas, res$changepoints, n)
         
         
         a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[3]], droppartialsum = TRUE, fast =FALSE,
+        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[3]], droppartialsum = TRUE, fast =FALSE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
-        rezi[["hdcd_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["hdcd_K"]]= res$changepointnumber
-        rezi[["hdcd_chgpts"]]= res$changepoints
-        rezi[["hdcd_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["hdcd_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["hdcd_ari"]] = ARI(etas, res$changepoints, n)
+        rezi[["ESAC_time"]] = (b-a)[1]+(b-a)[2]
+        rezi[["ESAC_K"]]= res$changepointnumber
+        rezi[["ESAC_chgpts"]]= res$changepoints
+        rezi[["ESAC_hausd"]] = hausdorff(res$changepoints, etas,n)
+        rezi[["ESAC_K_error"]] = length(res$changepoints) - length(etas)
+        rezi[["ESAC_ari"]] = ARI(etas, res$changepoints, n)
         
         a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 5, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[5]], droppartialsum = TRUE, fast =FALSE,
+        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 5, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[5]], droppartialsum = TRUE, fast =FALSE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
-        rezi[["hdcd_long_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["hdcd_long_K"]]= res$changepointnumber
-        rezi[["hdcd_long_chgpts"]]= res$changepoints
-        rezi[["hdcd_long_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["hdcd_long_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["hdcd_long_ari"]] = ARI(etas, res$changepoints, n)
+        rezi[["ESAC_long_time"]] = (b-a)[1]+(b-a)[2]
+        rezi[["ESAC_long_K"]]= res$changepointnumber
+        rezi[["ESAC_long_chgpts"]]= res$changepoints
+        rezi[["ESAC_long_hausd"]] = hausdorff(res$changepoints, etas,n)
+        rezi[["ESAC_long_K_error"]] = length(res$changepoints) - length(etas)
+        rezi[["ESAC_long_ari"]] = ARI(etas, res$changepoints, n)
         
         a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds = (calibrates[[j+(i-1)*length(ps)]])[[3]], thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[3]], droppartialsum = TRUE, fast =FALSE,
+        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds = (calibrates[[j+(i-1)*length(ps)]])[[3]], thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[3]], droppartialsum = TRUE, fast =FALSE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
-        rezi[["hdcd_emp_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["hdcd_emp_K"]]= res$changepointnumber
-        rezi[["hdcd_emp_chgpts"]]= res$changepoints
-        rezi[["hdcd_emp_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["hdcd_emp_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["hdcd_emp_ari"]] = ARI(etas, res$changepoints, n)
+        rezi[["ESAC_emp_time"]] = (b-a)[1]+(b-a)[2]
+        rezi[["ESAC_emp_K"]]= res$changepointnumber
+        rezi[["ESAC_emp_chgpts"]]= res$changepoints
+        rezi[["ESAC_emp_hausd"]] = hausdorff(res$changepoints, etas,n)
+        rezi[["ESAC_emp_K_error"]] = length(res$changepoints) - length(etas)
+        rezi[["ESAC_emp_ari"]] = ARI(etas, res$changepoints, n)
         
         a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 5, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[5]], thresholds = (calibrates[[j+(i-1)*length(ps)]])[[5]], droppartialsum = TRUE, fast =FALSE,
+        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 5, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[5]], thresholds = (calibrates[[j+(i-1)*length(ps)]])[[5]], droppartialsum = TRUE, fast =FALSE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
-        rezi[["hdcd_long_emp_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["hdcd_long_emp_K"]]= res$changepointnumber
-        rezi[["hdcd_long_emp_chgpts"]]= res$changepoints
-        rezi[["hdcd_long_emp_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["hdcd_long_emp_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["hdcd_long_emp_ari"]] = ARI(etas, res$changepoints, n)
+        rezi[["ESAC_long_emp_time"]] = (b-a)[1]+(b-a)[2]
+        rezi[["ESAC_long_emp_K"]]= res$changepointnumber
+        rezi[["ESAC_long_emp_chgpts"]]= res$changepoints
+        rezi[["ESAC_long_emp_hausd"]] = hausdorff(res$changepoints, etas,n)
+        rezi[["ESAC_long_emp_K_error"]] = length(res$changepoints) - length(etas)
+        rezi[["ESAC_long_emp_ari"]] = ARI(etas, res$changepoints, n)
         
-        # hdcd
+        # ESAC
         
         # slow FAST:
         # a = proc.time()
-        # res  = HDCD (X, 2,2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[4]] , droppartialsum = FALSE, fast =FALSE,debug= FALSE)
+        # res  = ESAC (X, 2,2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[4]] , droppartialsum = FALSE, fast =FALSE,debug= FALSE)
         # b=proc.time()
         # 
-        # rezi[["hdcd_time"]] = (b-a)[1]+(b-a)[2]
-        # rezi[["hdcd_K"]] = res$changepointnumber
-        # rezi[["hdcd_chgpts"]]= res$changepoints
-        # rezi[["hdcd_hausd"]] = hausdorff(res$changepoints, etas,n)
-        # rezi[["hdcd_K_error"]] = length(res$changepoints) - length(etas)
-        # rezi[["hdcd_ari"]] = ARI(etas, res$changepoints, n)
+        # rezi[["ESAC_time"]] = (b-a)[1]+(b-a)[2]
+        # rezi[["ESAC_K"]] = res$changepointnumber
+        # rezi[["ESAC_chgpts"]]= res$changepoints
+        # rezi[["ESAC_hausd"]] = hausdorff(res$changepoints, etas,n)
+        # rezi[["ESAC_K_error"]] = length(res$changepoints) - length(etas)
+        # rezi[["ESAC_ari"]] = ARI(etas, res$changepoints, n)
         # 
-        # hdcd slow
+        # ESAC slow
         # if(dim(X)[2]>500){
         #   rezi[["pilliat_time"]] = NA
         #   rezi[["pilliat_K"]] = NA
@@ -422,7 +422,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         # }
         # else{
         #a = proc.time()
-        #res = HDCD (X, 2,2, alpha = 1+1/6, K = 4, threshold_d_test = 1.5, 
+        #res = ESAC (X, 2,2, alpha = 1+1/6, K = 4, threshold_d_test = 1.5, 
         #            threshold_s_test = 1.5, droppartialsum = FALSE, fast =FALSE,debug= FALSE)
         #b=proc.time()
         
@@ -449,43 +449,43 @@ close(pb)
 stopCluster(cl) 
 
 {
-  hdcd_fast_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_fast_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_fast_time = array(0, dim= c(length(ns), length(ps), numconfig))
-  hdcd_fast_ari = array(0, dim= c(length(ns), length(ps), numconfig))
+  ESAC_fast_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
+  ESAC_fast_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
+  ESAC_fast_time = array(0, dim= c(length(ns), length(ps), numconfig))
+  ESAC_fast_ari = array(0, dim= c(length(ns), length(ps), numconfig))
   
-  hdcd_fast_np_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_fast_np_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_fast_np_time = array(0, dim= c(length(ns), length(ps), numconfig))
-  hdcd_fast_np_ari = array(0, dim= c(length(ns), length(ps), numconfig))
+  ESAC_fast_np_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
+  ESAC_fast_np_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
+  ESAC_fast_np_time = array(0, dim= c(length(ns), length(ps), numconfig))
+  ESAC_fast_np_ari = array(0, dim= c(length(ns), length(ps), numconfig))
   
-  hdcd_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_time = array(0, dim= c(length(ns), length(ps), numconfig))
-  hdcd_ari = array(0, dim= c(length(ns), length(ps), numconfig))
+  ESAC_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
+  ESAC_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
+  ESAC_time = array(0, dim= c(length(ns), length(ps), numconfig))
+  ESAC_ari = array(0, dim= c(length(ns), length(ps), numconfig))
   
-  hdcd_long_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_long_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_long_time = array(0, dim= c(length(ns), length(ps), numconfig))
-  hdcd_long_ari = array(0, dim= c(length(ns), length(ps), numconfig))
+  ESAC_long_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
+  ESAC_long_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
+  ESAC_long_time = array(0, dim= c(length(ns), length(ps), numconfig))
+  ESAC_long_ari = array(0, dim= c(length(ns), length(ps), numconfig))
   
-  hdcd_emp_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_emp_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_emp_time = array(0, dim= c(length(ns), length(ps), numconfig))
-  hdcd_emp_ari = array(0, dim= c(length(ns), length(ps), numconfig))
+  ESAC_emp_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
+  ESAC_emp_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
+  ESAC_emp_time = array(0, dim= c(length(ns), length(ps), numconfig))
+  ESAC_emp_ari = array(0, dim= c(length(ns), length(ps), numconfig))
   
-  hdcd_long_emp_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_long_emp_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
-  hdcd_long_emp_time = array(0, dim= c(length(ns), length(ps), numconfig))
-  hdcd_long_emp_ari = array(0, dim= c(length(ns), length(ps), numconfig))
+  ESAC_long_emp_hausd = array(0, dim = c(length(ns), length(ps), numconfig) )
+  ESAC_long_emp_Kerr = array(0, dim = c(length(ns), length(ps), numconfig) )
+  ESAC_long_emp_time = array(0, dim= c(length(ns), length(ps), numconfig))
+  ESAC_long_emp_ari = array(0, dim= c(length(ns), length(ps), numconfig))
   
   
-  hdcd_fast_hausd[,,1] = NA
-  hdcd_fast_np_hausd[,,1] = NA
-  hdcd_hausd[,,1] = NA
-  hdcd_emp_hausd[,,1] = NA
-  hdcd_long_emp_hausd[,,1] = NA
-  hdcd_long_hausd[,,1] = NA
+  ESAC_fast_hausd[,,1] = NA
+  ESAC_fast_np_hausd[,,1] = NA
+  ESAC_hausd[,,1] = NA
+  ESAC_emp_hausd[,,1] = NA
+  ESAC_long_emp_hausd[,,1] = NA
+  ESAC_long_hausd[,,1] = NA
   
   for (z in 1:N) {
     list = result[[z]]
@@ -497,41 +497,41 @@ stopCluster(cl)
       i = sublist[["i"]]
       j = sublist[["j"]]
       
-      hdcd_fast_Kerr[i,j,y] = hdcd_fast_Kerr[i,j,y] + abs(sublist[["hdcd_fast_K_error"]])/N
-      hdcd_fast_np_Kerr[i,j,y] = hdcd_fast_np_Kerr[i,j,y] + abs(sublist[["hdcd_fast_np_K_error"]])/N
-      hdcd_Kerr[i,j,y] = hdcd_Kerr[i,j,y] + abs(sublist[["hdcd_K_error"]])/N
-      hdcd_emp_Kerr[i,j,y] = hdcd_emp_Kerr[i,j,y] + abs(sublist[["hdcd_emp_K_error"]])/N
-      hdcd_long_Kerr[i,j,y] = hdcd_long_Kerr[i,j,y] + abs(sublist[["hdcd_long_K_error"]])/N
-      hdcd_long_emp_Kerr[i,j,y] = hdcd_long_emp_Kerr[i,j,y] + abs(sublist[["hdcd_long_emp_K_error"]])/N
+      ESAC_fast_Kerr[i,j,y] = ESAC_fast_Kerr[i,j,y] + abs(sublist[["ESAC_fast_K_error"]])/N
+      ESAC_fast_np_Kerr[i,j,y] = ESAC_fast_np_Kerr[i,j,y] + abs(sublist[["ESAC_fast_np_K_error"]])/N
+      ESAC_Kerr[i,j,y] = ESAC_Kerr[i,j,y] + abs(sublist[["ESAC_K_error"]])/N
+      ESAC_emp_Kerr[i,j,y] = ESAC_emp_Kerr[i,j,y] + abs(sublist[["ESAC_emp_K_error"]])/N
+      ESAC_long_Kerr[i,j,y] = ESAC_long_Kerr[i,j,y] + abs(sublist[["ESAC_long_K_error"]])/N
+      ESAC_long_emp_Kerr[i,j,y] = ESAC_long_emp_Kerr[i,j,y] + abs(sublist[["ESAC_long_emp_K_error"]])/N
       
       
-      hdcd_fast_time[i,j,y] = hdcd_fast_time[i,j,y] + sublist[["hdcd_fast_time"]]/N
-      hdcd_fast_np_time[i,j,y] = hdcd_fast_np_time[i,j,y] + sublist[["hdcd_fast_np_time"]]/N
-      hdcd_time[i,j,y] = hdcd_time[i,j,y] + sublist[["hdcd_time"]]/N
-      hdcd_emp_time[i,j,y] = hdcd_emp_time[i,j,y] + sublist[["hdcd_emp_time"]]/N
-      hdcd_long_time[i,j,y] = hdcd_long_time[i,j,y] + sublist[["hdcd_long_time"]]/N
-      hdcd_long_emp_time[i,j,y] = hdcd_long_emp_time[i,j,y] + sublist[["hdcd_long_emp_time"]]/N
+      ESAC_fast_time[i,j,y] = ESAC_fast_time[i,j,y] + sublist[["ESAC_fast_time"]]/N
+      ESAC_fast_np_time[i,j,y] = ESAC_fast_np_time[i,j,y] + sublist[["ESAC_fast_np_time"]]/N
+      ESAC_time[i,j,y] = ESAC_time[i,j,y] + sublist[["ESAC_time"]]/N
+      ESAC_emp_time[i,j,y] = ESAC_emp_time[i,j,y] + sublist[["ESAC_emp_time"]]/N
+      ESAC_long_time[i,j,y] = ESAC_long_time[i,j,y] + sublist[["ESAC_long_time"]]/N
+      ESAC_long_emp_time[i,j,y] = ESAC_long_emp_time[i,j,y] + sublist[["ESAC_long_emp_time"]]/N
       
       
-      hdcd_fast_ari[i,j,y] = hdcd_fast_ari[i,j,y] + sublist[["hdcd_fast_ari"]]/N
-      hdcd_fast_np_ari[i,j,y] = hdcd_fast_np_ari[i,j,y] + sublist[["hdcd_fast_np_ari"]]/N
-      hdcd_ari[i,j,y] = hdcd_ari[i,j,y] + sublist[["hdcd_ari"]]/N
-      hdcd_emp_ari[i,j,y] = hdcd_emp_ari[i,j,y] + sublist[["hdcd_emp_ari"]]/N
-      hdcd_long_ari[i,j,y] = hdcd_long_ari[i,j,y] + sublist[["hdcd_long_ari"]]/N
-      hdcd_long_emp_ari[i,j,y] = hdcd_long_emp_ari[i,j,y] + sublist[["hdcd_long_emp_ari"]]/N
+      ESAC_fast_ari[i,j,y] = ESAC_fast_ari[i,j,y] + sublist[["ESAC_fast_ari"]]/N
+      ESAC_fast_np_ari[i,j,y] = ESAC_fast_np_ari[i,j,y] + sublist[["ESAC_fast_np_ari"]]/N
+      ESAC_ari[i,j,y] = ESAC_ari[i,j,y] + sublist[["ESAC_ari"]]/N
+      ESAC_emp_ari[i,j,y] = ESAC_emp_ari[i,j,y] + sublist[["ESAC_emp_ari"]]/N
+      ESAC_long_ari[i,j,y] = ESAC_long_ari[i,j,y] + sublist[["ESAC_long_ari"]]/N
+      ESAC_long_emp_ari[i,j,y] = ESAC_long_emp_ari[i,j,y] + sublist[["ESAC_long_emp_ari"]]/N
       
       
       # if(i==1 & j ==1 & y==1){
-      #   print(sublist[["hdcd_ari"]])
+      #   print(sublist[["ESAC_ari"]])
       # }
       
       if(y!= 1){
-        hdcd_fast_hausd[i,j,y] = hdcd_fast_hausd[i,j,y] + sublist[["hdcd_fast_hausd"]]/N
-        hdcd_fast_np_hausd[i,j,y] = hdcd_fast_np_hausd[i,j,y] + sublist[["hdcd_fast_np_hausd"]]/N
-        hdcd_hausd[i,j,y] = hdcd_hausd[i,j,y] + sublist[["hdcd_hausd"]]/N
-        hdcd_emp_hausd[i,j,y] = hdcd_emp_hausd[i,j,y] + sublist[["hdcd_emp_hausd"]]/N
-        hdcd_long_hausd[i,j,y] = hdcd_long_hausd[i,j,y] + sublist[["hdcd_long_hausd"]]/N
-        hdcd_long_emp_hausd[i,j,y] = hdcd_long_emp_hausd[i,j,y] + sublist[["hdcd_long_emp_hausd"]]/N
+        ESAC_fast_hausd[i,j,y] = ESAC_fast_hausd[i,j,y] + sublist[["ESAC_fast_hausd"]]/N
+        ESAC_fast_np_hausd[i,j,y] = ESAC_fast_np_hausd[i,j,y] + sublist[["ESAC_fast_np_hausd"]]/N
+        ESAC_hausd[i,j,y] = ESAC_hausd[i,j,y] + sublist[["ESAC_hausd"]]/N
+        ESAC_emp_hausd[i,j,y] = ESAC_emp_hausd[i,j,y] + sublist[["ESAC_emp_hausd"]]/N
+        ESAC_long_hausd[i,j,y] = ESAC_long_hausd[i,j,y] + sublist[["ESAC_long_hausd"]]/N
+        ESAC_long_emp_hausd[i,j,y] = ESAC_long_emp_hausd[i,j,y] + sublist[["ESAC_long_emp_hausd"]]/N
       }
       
       
@@ -545,35 +545,35 @@ stopCluster(cl)
 
 if(save){
   saveRDS(result, file=sprintf("%s/result.RDA", savedir))
-  saveRDS(hdcd_fast_hausd, file=sprintf("%s/hdcd_fast_haus.RDA", savedir))
-  saveRDS(hdcd_fast_time, file=sprintf("%s/hdcd_fast_time.RDA", savedir))
-  saveRDS(hdcd_fast_Kerr, file=sprintf("%s/hdcd_fast_Kerr.RDA", savedir))
-  saveRDS(hdcd_fast_ari, file=sprintf("%s/hdcd_fast_ari.RDA", savedir))
+  saveRDS(ESAC_fast_hausd, file=sprintf("%s/ESAC_fast_haus.RDA", savedir))
+  saveRDS(ESAC_fast_time, file=sprintf("%s/ESAC_fast_time.RDA", savedir))
+  saveRDS(ESAC_fast_Kerr, file=sprintf("%s/ESAC_fast_Kerr.RDA", savedir))
+  saveRDS(ESAC_fast_ari, file=sprintf("%s/ESAC_fast_ari.RDA", savedir))
   
-  saveRDS(hdcd_fast_np_hausd, file=sprintf("%s/hdcd_fast_np_haus.RDA", savedir))
-  saveRDS(hdcd_fast_np_time, file=sprintf("%s/hdcd_fast_np_time.RDA", savedir))
-  saveRDS(hdcd_fast_np_Kerr, file=sprintf("%s/hdcd_fast_np_Kerr.RDA", savedir))
-  saveRDS(hdcd_fast_np_ari, file=sprintf("%s/hdcd_fast_np_ari.RDA", savedir))
+  saveRDS(ESAC_fast_np_hausd, file=sprintf("%s/ESAC_fast_np_haus.RDA", savedir))
+  saveRDS(ESAC_fast_np_time, file=sprintf("%s/ESAC_fast_np_time.RDA", savedir))
+  saveRDS(ESAC_fast_np_Kerr, file=sprintf("%s/ESAC_fast_np_Kerr.RDA", savedir))
+  saveRDS(ESAC_fast_np_ari, file=sprintf("%s/ESAC_fast_np_ari.RDA", savedir))
   
-  saveRDS(hdcd_hausd, file=sprintf("%s/hdcd_haus.RDA", savedir))
-  saveRDS(hdcd_time, file=sprintf("%s/hdcd_time.RDA", savedir))
-  saveRDS(hdcd_Kerr, file=sprintf("%s/hdcd_Kerr.RDA", savedir))
-  saveRDS(hdcd_ari, file=sprintf("%s/hdcd_ari.RDA", savedir))
+  saveRDS(ESAC_hausd, file=sprintf("%s/ESAC_haus.RDA", savedir))
+  saveRDS(ESAC_time, file=sprintf("%s/ESAC_time.RDA", savedir))
+  saveRDS(ESAC_Kerr, file=sprintf("%s/ESAC_Kerr.RDA", savedir))
+  saveRDS(ESAC_ari, file=sprintf("%s/ESAC_ari.RDA", savedir))
   
-  saveRDS(hdcd_long_hausd, file=sprintf("%s/hdcd_long_haus.RDA", savedir))
-  saveRDS(hdcd_long_time, file=sprintf("%s/hdcd_long_time.RDA", savedir))
-  saveRDS(hdcd_long_Kerr, file=sprintf("%s/hdcd_long_Kerr.RDA", savedir))
-  saveRDS(hdcd_long_ari, file=sprintf("%s/hdcd_long_ari.RDA", savedir))
+  saveRDS(ESAC_long_hausd, file=sprintf("%s/ESAC_long_haus.RDA", savedir))
+  saveRDS(ESAC_long_time, file=sprintf("%s/ESAC_long_time.RDA", savedir))
+  saveRDS(ESAC_long_Kerr, file=sprintf("%s/ESAC_long_Kerr.RDA", savedir))
+  saveRDS(ESAC_long_ari, file=sprintf("%s/ESAC_long_ari.RDA", savedir))
   
-  saveRDS(hdcd_emp_hausd, file=sprintf("%s/hdcd_emp_haus.RDA", savedir))
-  saveRDS(hdcd_emp_time, file=sprintf("%s/hdcd_emp_time.RDA", savedir))
-  saveRDS(hdcd_emp_Kerr, file=sprintf("%s/hdcd_emp_Kerr.RDA", savedir))
-  saveRDS(hdcd_emp_ari, file=sprintf("%s/hdcd_emp_ari.RDA", savedir))
+  saveRDS(ESAC_emp_hausd, file=sprintf("%s/ESAC_emp_haus.RDA", savedir))
+  saveRDS(ESAC_emp_time, file=sprintf("%s/ESAC_emp_time.RDA", savedir))
+  saveRDS(ESAC_emp_Kerr, file=sprintf("%s/ESAC_emp_Kerr.RDA", savedir))
+  saveRDS(ESAC_emp_ari, file=sprintf("%s/ESAC_emp_ari.RDA", savedir))
   
-  saveRDS(hdcd_long_emp_hausd, file=sprintf("%s/hdcd_long_emp_haus.RDA", savedir))
-  saveRDS(hdcd_long_emp_time, file=sprintf("%s/hdcd_long_emp_time.RDA", savedir))
-  saveRDS(hdcd_long_emp_Kerr, file=sprintf("%s/hdcd_long_emp_Kerr.RDA", savedir))
-  saveRDS(hdcd_long_emp_ari, file=sprintf("%s/hdcd_long_emp_ari.RDA", savedir))
+  saveRDS(ESAC_long_emp_hausd, file=sprintf("%s/ESAC_long_emp_haus.RDA", savedir))
+  saveRDS(ESAC_long_emp_time, file=sprintf("%s/ESAC_long_emp_time.RDA", savedir))
+  saveRDS(ESAC_long_emp_Kerr, file=sprintf("%s/ESAC_long_emp_Kerr.RDA", savedir))
+  saveRDS(ESAC_long_emp_ari, file=sprintf("%s/ESAC_long_emp_ari.RDA", savedir))
 
   
   
@@ -638,9 +638,9 @@ if(save){
         }
         
         else{
-          res = round(c(hdcd_fast_hausd[i,j,y], hdcd_fast_np_hausd[i,j,y], hdcd_hausd[i,j,y], hdcd_long_hausd[i,j,y]),digits=3)
+          res = round(c(ESAC_fast_hausd[i,j,y], ESAC_fast_np_hausd[i,j,y], ESAC_hausd[i,j,y], ESAC_long_hausd[i,j,y]),digits=3)
           minind = (res==min(na.omit(res)))
-          res = c(hdcd_fast_hausd[i,j,y], hdcd_fast_np_hausd[i,j,y], hdcd_hausd[i,j,y], hdcd_long_hausd[i,j,y])
+          res = c(ESAC_fast_hausd[i,j,y], ESAC_fast_np_hausd[i,j,y], ESAC_hausd[i,j,y], ESAC_long_hausd[i,j,y])
           
           for (t in 1:length(res)) {
             if(is.na(res[t])){
@@ -654,9 +654,9 @@ if(save){
           }
         }
         
-        res = round(c(hdcd_fast_Kerr[i,j,y], hdcd_fast_np_Kerr[i,j,y], hdcd_Kerr[i,j,y], hdcd_long_Kerr[i,j,y]),digits=3)
+        res = round(c(ESAC_fast_Kerr[i,j,y], ESAC_fast_np_Kerr[i,j,y], ESAC_Kerr[i,j,y], ESAC_long_Kerr[i,j,y]),digits=3)
         minind = (abs(res)==min(abs(res)))
-        res = c(hdcd_fast_Kerr[i,j,y], hdcd_fast_np_Kerr[i,j,y], hdcd_Kerr[i,j,y], hdcd_long_Kerr[i,j,y])
+        res = c(ESAC_fast_Kerr[i,j,y], ESAC_fast_np_Kerr[i,j,y], ESAC_Kerr[i,j,y], ESAC_long_Kerr[i,j,y])
         
         for (t in 1:length(res)) {
           if(minind[t]){
@@ -666,9 +666,9 @@ if(save){
           }
         }
         
-        res = round(c(hdcd_fast_ari[i,j,y], hdcd_fast_np_ari[i,j,y], hdcd_ari[i,j,y], hdcd_long_ari[i,j,y]),digits=3)
+        res = round(c(ESAC_fast_ari[i,j,y], ESAC_fast_np_ari[i,j,y], ESAC_ari[i,j,y], ESAC_long_ari[i,j,y]),digits=3)
         minind = (abs(res)==max(abs(res)))
-        res = c(hdcd_fast_ari[i,j,y], hdcd_fast_np_ari[i,j,y], hdcd_ari[i,j,y], hdcd_long_ari[i,j,y])
+        res = c(ESAC_fast_ari[i,j,y], ESAC_fast_np_ari[i,j,y], ESAC_ari[i,j,y], ESAC_long_ari[i,j,y])
         for (t in 1:length(res)) {
           if(minind[t]){
             string = sprintf("%s & \\textbf{%.3f} ", string, res[t])
@@ -678,9 +678,9 @@ if(save){
         }
         
         
-        res = round(1000*c(hdcd_fast_time[i,j,y], hdcd_fast_np_time[i,j,y], hdcd_time[i,j,y], hdcd_long_time[i,j,y]),digits=3)
+        res = round(1000*c(ESAC_fast_time[i,j,y], ESAC_fast_np_time[i,j,y], ESAC_time[i,j,y], ESAC_long_time[i,j,y]),digits=3)
         minind = (res==min(res))
-        res = 1000*c(hdcd_fast_time[i,j,y], hdcd_fast_np_time[i,j,y], hdcd_time[i,j,y], hdcd_long_time[i,j,y])
+        res = 1000*c(ESAC_fast_time[i,j,y], ESAC_fast_np_time[i,j,y], ESAC_time[i,j,y], ESAC_long_time[i,j,y])
         
         for (t in 1:length(res)) {
           if(minind[t]){

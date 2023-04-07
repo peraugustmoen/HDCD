@@ -14,14 +14,16 @@ save = TRUE
 
 if(save){
   dir.create(savedir, showWarnings = FALSE)
-  savedir = file.path(maindir, sprintf("%s/single",dateandtime))
+  savedir = file.path(maindir, sprintf("%s/single_rate",dateandtime))
   dir.create(savedir, showWarnings =FALSE )
-  plotdir = file.path(maindir, sprintf("%s/single/plots",dateandtime))
+  plotdir = file.path(maindir, sprintf("%s/single_rate/plots",dateandtime))
   dir.create(plotdir, showWarnings =FALSE )
   
 }
-ns = c(200,500)
-ps = c(100,1000,5000)
+#ns = c(200,500)
+ns = c(200)
+ps = c(1000)
+#ps = c(100,1000,5000)
 #ps = ns[]
 #ps = c(500,1000,2000,5000)
 kvals=4
@@ -29,13 +31,13 @@ totruns = length(ns)*length(ps)*kvals
 
 simsbsN = 1000
 simsbstoln = 1/simsbsN
-rescale_variance = TRUE
+
 #for sbs: 
 set.seed(1996)
 pis = matrix(nrow = length(ns), ncol =length(ps))
 for (i in 1:length(ns)) {
   for (j in 1:length(ps)) {
-    pis[i,j] =  single_SBS_calibrate(ns[i],ps[j],simsbsN,simsbstoln,rescale_variance = rescale_variance,debug=FALSE)
+    pis[i,j] =  single_SBS_calibrate(ns[i],ps[j],simsbsN,simsbstoln,rescale_variance = TRUE,debug=FALSE)
     
   }
 }
@@ -46,6 +48,8 @@ num_cores = 6
 sparse_const = 2.5
 dense_const = 2.5
 even_spread = TRUE
+NN = 40
+consts = seq(2.0, 5, length.out = NN)
 #ns = c(500,1000,2000)
 #ns = c(100,500,1000)
 #ns = c(500,1000,2000)
@@ -53,6 +57,7 @@ even_spread = TRUE
 #ps = c(1000,2000,10000)
 #ns = c(200,500)
 
+rescale_variance=TRUE
 
 
 kfunc = function(y, n, p){
@@ -88,10 +93,10 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
   library(HDCD)
   library(hdbinseg)
   source("/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/HDCD/SUBSET/SUBSET_normal.R")
-  for (i in 1:length(ns)) {
-    n = ns[i]
-    for(j in 1:length(ps)){
-      p = ps[j]
+  #for (i in 1:length(ns)) {
+    n = ns[1]
+    for(j in 1:NN){
+      p = ps[1]
       for (y in 1:kvals) {
         rezi = list()
         # determine k!!
@@ -105,11 +110,11 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         
         diff = 0
         if(k<sqrt(p*log(n))){
-          rootnorm = sparse_const/sqrt(eta)*sqrt((c(k*log(exp(1)*p*log(n)/k^2)+ log(n))))
+          rootnorm = consts[j]/sqrt(eta)*sqrt((c(k*log(exp(1)*p*log(n)/k^2)+ log(n))))
           diff = rootnorm * c(sample(c(-1,1), replace=TRUE,k), rep(0,p-k))/sqrt(k)
-  
+          
         }else{
-          rootnorm = dense_const/sqrt(eta)*(p*log(n))^(1/4)
+          rootnorm = consts[j]/sqrt(eta)*(p*log(n))^(1/4)
           diff = rootnorm * c(sample(c(-1,1), replace=TRUE,k), rep(0,p-k))/sqrt(k)
         }
         if(!even_spread){
@@ -124,7 +129,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         
         # DC
         a = proc.time()
-        res_dc = dcbs.alg(X[,],phi = -1,height=1, thr = 0,cp.type=1,temporal=FALSE )
+        res_dc = dcbs.alg(X[,],phi = -1, height=1, thr = 0,cp.type=1,temporal=FALSE )
         b=proc.time()
         
         #res_dc$ecp
@@ -136,7 +141,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         }
         #then sbs
         a = proc.time()
-        res_sbs = sbs.alg(X[,],height=1, thr = rep(sqrt(pis[i,j]),p),cp.type=1,temporal=FALSE )
+        res_sbs = sbs.alg(X[,],height=1, thr = rep(sqrt(pis[1,1]),p),cp.type=1,temporal=FALSE )
         #ress = single_SBS(X,pis[i,j] )
         #ress$pos
         #res_sbs$ecp
@@ -146,9 +151,9 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         if(!is.numeric(res_sbs$ecp)){
           #rezi["sbs_res"] = round(n/2)
           if(!rescale_variance){
-            ress = single_SBS(X[,],pis[i,j] )
+            ress = single_SBS(X[,],pis[1,1] )
           }else{
-            ress = single_SBS(rescale.variance(X),pis[i,j] )
+            ress = single_SBS(rescale.variance(X),pis[1,1] )
           }
           
           rezi["sbs_res"] = ress$pos
@@ -204,7 +209,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         }
         
         rezi["z"] = z
-        rezi["i"] = i
+        #rezi["i"] = i
         rezi["j"] = j
         rezi["y"] = y
         rezi["k"] = k
@@ -218,8 +223,8 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         
       }
     }
-  }
-
+  #}
+  
   rez
 }
 # bb = proc.time()
@@ -229,26 +234,26 @@ close(pb)
 stopCluster(cl) 
 
 {
-  inspect_res = array(NA, dim = c(length(ns), length(ps), kvals,N) )
-  inspect_time = array(0, dim= c(length(ns), length(ps), kvals))
-  inspect_mse = array(0, dim= c(length(ns), length(ps), kvals))
-  ESAC_res = array(NA, dim = c(length(ns), length(ps), kvals,N) )
-  ESAC_s = array(NA, dim = c(length(ns), length(ps), kvals,N) )
-  ESAC_time = array(0, dim= c(length(ns), length(ps), kvals))
-  ESAC_mse = array(0, dim= c(length(ns), length(ps), kvals))
-  scan_res = array(NA, dim = c(length(ns), length(ps), kvals,N) )
-  scan_s = array(NA, dim = c(length(ns), length(ps), kvals,N) )
-  scan_time = array(0, dim= c(length(ns), length(ps), kvals))
-  scan_mse = array(NA, dim= c(length(ns), length(ps), kvals))  
-  sbs_res = array(NA, dim = c(length(ns), length(ps), kvals,N) )
-  sbs_time = array(0, dim= c(length(ns), length(ps), kvals))
-  sbs_mse = array(0, dim= c(length(ns), length(ps), kvals))
-  subset_res = array(NA, dim = c(length(ns), length(ps), kvals,N) )
-  subset_time = array(0, dim= c(length(ns), length(ps), kvals))
-  subset_mse = array(0, dim= c(length(ns), length(ps), kvals))  
-  dc_res = array(NA, dim = c(length(ns), length(ps), kvals,N) )
-  dc_time = array(0, dim= c(length(ns), length(ps), kvals))
-  dc_mse = array(0, dim= c(length(ns), length(ps), kvals))
+  inspect_res = array(NA, dim = c( NN, kvals,N) )
+  #inspect_time = array(0, dim= c( NN, kvals))
+  inspect_mae = array(0, dim= c( NN, kvals))
+  ESAC_res = array(NA, dim = c( NN, kvals,N) )
+  #ESAC_s = array(NA, dim = c( NN, kvals,N) )
+  #ESAC_time = array(0, dim= c( NN, kvals))
+  ESAC_mae = array(0, dim= c( NN, kvals))
+  #scan_res = array(NA, dim = c( NN, kvals,N) )
+  #scan_s = array(NA, dim = c( NN, kvals,N) )
+  #scan_time = array(0, dim= c( NN, kvals))
+  #scan_mae = array(NA, dim= c( NN, kvals))  
+  sbs_res = array(NA, dim = c( NN, kvals,N) )
+  #sbs_time = array(0, dim= c( NN, kvals))
+  sbs_mae = array(0, dim= c( NN, kvals))
+  subset_res = array(NA, dim = c( NN, kvals,N) )
+  #subset_time = array(0, dim= c( NN, kvals))
+  subset_mae = array(0, dim= c( NN, kvals))  
+  dc_res = array(NA, dim = c( NN, kvals,N) )
+  #dc_time = array(0, dim= c( NN, kvals))
+  dc_mae = array(0, dim= c( NN, kvals))
   
   for (z in 1:N) {
     list = result[[z]]
@@ -257,29 +262,29 @@ stopCluster(cl)
     for (t in 1:len) {
       sublist = list[[t]]
       y = sublist[["y"]]
-      i = sublist[["i"]]
+      #i = sublist[["i"]]
       j = sublist[["j"]]
       eta = sublist[["eta"]]
       
-      inspect_res[i,j,y,z] = sublist["inspect_res"][[1]]
-      inspect_time[i,j,y] = inspect_time[i,j,y] +  sublist["inspect_time"][[1]]/N
-      inspect_mse[i,j,y] = inspect_mse[i,j,y] + (inspect_res[i,j,y,z] - eta)^2/N
+      inspect_res[j,y,z] = sublist["inspect_res"][[1]]
+      #inspect_time[j,y] = inspect_time[j,y] +  sublist["inspect_time"][[1]]/N
+      inspect_mae[j,y] = inspect_mae[j,y] + abs((inspect_res[j,y,z] - eta)^2)/N
       
-      ESAC_res[i,j,y,z] = sublist["ESAC_res"][[1]]
-      ESAC_time[i,j,y] = ESAC_time[i,j,y] + sublist["ESAC_time"][[1]]/N
-      ESAC_mse[i,j,y] = ESAC_mse[i,j,y] + (ESAC_res[i,j,y,z] - eta)^2/N
+      ESAC_res[j,y,z] = sublist["ESAC_res"][[1]]
+      #ESAC_time[j,y] = ESAC_time[j,y] + sublist["ESAC_time"][[1]]/N
+      ESAC_mae[j,y] = ESAC_mae[j,y] + abs((ESAC_res[j,y,z] - eta)^2)/N
       
-      sbs_res[i,j,y,z] = sublist["sbs_res"][[1]]
-      sbs_time[i,j,y] = sbs_time[i,j,y] +  sublist["sbs_time"][[1]]/N
-      sbs_mse[i,j,y] = sbs_mse[i,j,y] + (sbs_res[i,j,y,z] - eta)^2/N
+      sbs_res[j,y,z] = sublist["sbs_res"][[1]]
+      #sbs_time[j,y] = sbs_time[j,y] +  sublist["sbs_time"][[1]]/N
+      sbs_mae[j,y] = sbs_mae[j,y] + abs((sbs_res[j,y,z] - eta)^2)/N
       
-      subset_res[i,j,y,z] = sublist["subset_res"][[1]]
-      subset_time[i,j,y] = subset_time[i,j,y] +  sublist["subset_time"][[1]]/N
-      subset_mse[i,j,y] = subset_mse[i,j,y] + (subset_res[i,j,y,z] - eta)^2/N
+      subset_res[j,y,z] = sublist["subset_res"][[1]]
+      #subset_time[j,y] = subset_time[j,y] +  sublist["subset_time"][[1]]/N
+      subset_mae[j,y] = subset_mae[j,y] + abs((subset_res[j,y,z] - eta)^2)/N
       
-      dc_res[i,j,y,z] = sublist["dc_res"][[1]]
-      dc_time[i,j,y] = dc_time[i,j,y] + sublist["dc_time"][[1]]/N
-      dc_mse[i,j,y] = dc_mse[i,j,y] + (dc_res[i,j,y,z] - eta)^2/N
+      dc_res[j,y,z] = sublist["dc_res"][[1]]
+      #dc_time[j,y] = dc_time[j,y] + sublist["dc_time"][[1]]/N
+      dc_mae[j,y] = dc_mae[j,y] + abs((dc_res[j,y,z] - eta)^2)/N
       
       
     }
@@ -294,40 +299,47 @@ stopCluster(cl)
   #       inspect_res[i,j,y,] = result[6, subset]
   #       inspect_time[i,j,y] = sum(result[7, subset])
   #       eta = round(n*0.2)
-  #       inspect_mse[i,j,y] = mean((inspect_res[i,j,y,] - eta)^2)
+  #       inspect_mae[i,j,y] = mean((inspect_res[i,j,y,] - eta)^2)
   #       ESAC_res[i,j,y,] = result[8, subset]
   #       ESAC_time[i,j,y] = sum(result[9, subset])
   #       ESAC_s[i,j,y,] = result[10, subset]
-  #       ESAC_mse[i,j,y] = mean((ESAC_res[i,j,y,] - eta)^2)
+  #       ESAC_mae[i,j,y] = mean((ESAC_res[i,j,y,] - eta)^2)
   #       
   #       scan_res[i,j,y,] = result[11, subset]
   #       scan_time[i,j,y] = sum(result[12, subset])
   #       scan_s[i,j,y,] = result[13, subset]
-  #       scan_mse[i,j,y] = mean((scan_res[i,j,y,] - eta)^2)
+  #       scan_mae[i,j,y] = mean((scan_res[i,j,y,] - eta)^2)
   #       
   #       sbs_res[i,j,y,] = result[14, subset]
   #       sbs_time[i,j,y] = sum(result[15, subset])
-  #       sbs_mse[i,j,y] = mean((sbs_res[i,j,y,] - eta)^2)
+  #       sbs_mae[i,j,y] = mean((sbs_res[i,j,y,] - eta)^2)
   #       
   #       subset_res[i,j,y,] = result[16, subset]
   #       subset_time[i,j,y] = sum(result[17, subset])
-  #       subset_mse[i,j,y] = mean((subset_res[i,j,y,] - eta)^2)
+  #       subset_mae[i,j,y] = mean((subset_res[i,j,y,] - eta)^2)
   #       
   #       dc_res[i,j,y,] = result[18, subset]
   #       dc_time[i,j,y] = sum(result[19, subset])
-  #       dc_mse[i,j,y] = mean((dc_res[i,j,y,] - eta)^2)
+  #       dc_mae[i,j,y] = mean((dc_res[i,j,y,] - eta)^2)
   #     }
   #   }
   # }
 }
 
+kk = 1
+plot(consts^2, inspect_mae[1:NN, kk],type="l")
+abline(h=0)
+lines(consts^2, ESAC_mae[1:NN, kk], type="l",col=2)
+lines(consts^2, subset_mae[1:NN, kk], type="l",col=3)
+lines(consts^2, dc_mae[1:NN, kk], type="l",col=4)
+lines(consts^2, sbs_mae[1:NN, kk], type="l",col=5)
 
 
 
 
-inspect_mse - ESAC_mse
-inspect_mse
-ESAC_mse
+inspect_mae - ESAC_mae
+inspect_mae
+ESAC_mae
 
 par(mfrow=c(1,2))
 hist(inspect_res[1,2,4,])
@@ -335,26 +347,26 @@ hist(ESAC_res[1,2,4,])
 
 #saving: 
 if(save){
-  saveRDS(inspect_mse, file=sprintf("%s/inspect_mse.RDA", savedir))
-  saveRDS(inspect_time, file=sprintf("%s/inspect_time.RDA", savedir))
+  saveRDS(inspect_mae, file=sprintf("%s/inspect_mae.RDA", savedir))
+  #saveRDS(inspect_time, file=sprintf("%s/inspect_time.RDA", savedir))
   saveRDS(inspect_res, file=sprintf("%s/inspect_res.RDA", savedir))
   saveRDS(ESAC_res, file=sprintf("%s/ESAC_res.RDA", savedir))
   saveRDS(ESAC_s, file=sprintf("%s/ESAC_s.RDA", savedir))
-  saveRDS(ESAC_time, file=sprintf("%s/ESAC_time.RDA", savedir))
-  saveRDS(ESAC_mse, file=sprintf("%s/ESAC_mse.RDA", savedir))
+  #saveRDS(ESAC_time, file=sprintf("%s/ESAC_time.RDA", savedir))
+  saveRDS(ESAC_mae, file=sprintf("%s/ESAC_mae.RDA", savedir))
   saveRDS(scan_res, file=sprintf("%s/scan_res.RDA", savedir))
   saveRDS(scan_s, file=sprintf("%s/scan_s.RDA", savedir))
-  saveRDS(scan_time, file=sprintf("%s/scan_time.RDA", savedir))
-  saveRDS(scan_mse, file=sprintf("%s/scan_mse.RDA", savedir))
-  saveRDS(sbs_mse, file=sprintf("%s/sbs_mse.RDA", savedir))
+  #saveRDS(scan_time, file=sprintf("%s/scan_time.RDA", savedir))
+  saveRDS(scan_mae, file=sprintf("%s/scan_mae.RDA", savedir))
+  saveRDS(sbs_mae, file=sprintf("%s/sbs_mae.RDA", savedir))
   saveRDS(sbs_res, file=sprintf("%s/sbs_res.RDA", savedir))
-  saveRDS(sbs_time, file=sprintf("%s/sbs_time.RDA", savedir))
-  saveRDS(subset_mse, file=sprintf("%s/subset_mse.RDA", savedir))
+  #saveRDS(sbs_time, file=sprintf("%s/sbs_time.RDA", savedir))
+  saveRDS(subset_mae, file=sprintf("%s/subset_mae.RDA", savedir))
   saveRDS(subset_res, file=sprintf("%s/subset_res.RDA", savedir))
-  saveRDS(subset_time, file=sprintf("%s/subset_time.RDA", savedir))
-  saveRDS(dc_mse, file=sprintf("%s/dc_mse.RDA", savedir))
+  #saveRDS(subset_time, file=sprintf("%s/subset_time.RDA", savedir))
+  saveRDS(dc_mae, file=sprintf("%s/dc_mae.RDA", savedir))
   saveRDS(dc_res, file=sprintf("%s/dc_res.RDA", savedir))
-  saveRDS(dc_time, file=sprintf("%s/dc_time.RDA", savedir))
+  #saveRDS(dc_time, file=sprintf("%s/dc_time.RDA", savedir))
   
   infofile<-file(sprintf("%s/parameters.txt", savedir))
   writeLines(c(sprintf("N = %d", N),
@@ -362,10 +374,131 @@ if(save){
                sprintf("ps = %s", paste(ps, sep=" ", collapse=" ")), 
                sprintf("Sparse constant = %f", sparse_const), 
                sprintf("Dense constant = %f", dense_const),
-               sprintf("Even spread = %d", even_spread)),
+               sprintf("Even spread = %d", as.integer(even_spread))),
              infofile)
   close(infofile)
 }
+
+
+
+
+library(ggplot2)
+library(latex2exp)
+par(mfrow = c(2,2))
+#for (i in 1:length(ns)) {
+#  for(j in 1:length(ps)){
+    for (kk in 1:4) {
+      n = ns[1]
+      p = ps[1]
+      print(sprintf("i = %d, n = %d, j = %d, p = %d, kk = %d, k = %d", 
+                    i, ns[i], j, ps[j], kk, kfunc(kk, ns[i], ps[i])))
+      
+      rezz_inspect = logConDens(inspect_res[i,j,kk,],smoothed=FALSE, print=FALSE)
+      rezz_ESAC = logConDens(ESAC_res[i,j,kk,],smoothed=FALSE, print=FALSE)
+      rezz_sbs = NULL
+      sbs_res2 = sbs_res[i,j,kk,]
+      sbs_res2[sbs_res2 == 1] = sample(1:(n-1), size=sum(sbs_res2==1),replace=TRUE)
+      #if(var(sbs_res[i,j,kk,])>0.0001){
+      rezz_sbs = logConDens(sbs_res2,smoothed=FALSE, print=FALSE)
+      #}
+      
+      rezz_subset = logConDens(subset_res[i,j,kk,],smoothed=FALSE, print=FALSE)
+      #rezz_scan = logConDens(scan_res[i,j,kk,],smoothed=FALSE, print=FALSE)
+      rezz_dc = logConDens(dc_res[i,j,kk,],smoothed=FALSE, print=FALSE)
+      
+      eta = round(0.2*n)
+      xs = seq(eta-20,eta+20, by=1)
+      dens_ESAC = rep(NA, length(xs))
+      dens_inspect = rep(NA, length(xs))
+      dens_sbs = rep(NA, length(xs))
+      dens_subset = rep(NA, length(xs))
+      dens_scan = rep(NA, length(xs))
+      dens_dc = rep(NA, length(xs))
+      
+      for (ii in 1:length(xs)) {
+        xx = xs[ii]
+        dens_ESAC[ii] = (evaluateLogConDens(xx, rezz_ESAC, which = 1:3)[, c("log-density", "density", "CDF")])[2]
+        dens_inspect[ii] = (evaluateLogConDens(xx, rezz_inspect, which = 1:3)[, c("log-density", "density", "CDF")])[2]
+        if(var(sbs_res[i,j,kk,])>0.0001){
+          dens_sbs[ii] = (evaluateLogConDens(xx, rezz_sbs, which = 1:3)[, c("log-density", "density", "CDF")])[2]
+        }else{dens_sbs[ii] = 1/length(xs)}
+        dens_subset[ii] = (evaluateLogConDens(xx, rezz_subset, which = 1:3)[, c("log-density", "density", "CDF")])[2]
+        #dens_scan[ii] = (evaluateLogConDens(xx, rezz_scan, which = 1:3)[, c("log-density", "density", "CDF")])[2]
+        dens_dc[ii] = (evaluateLogConDens(xx, rezz_dc, which = 1:3)[, c("log-density", "density", "CDF")])[2]
+      }
+      
+      # ESACdf <- data.frame(
+      #   xs,dens_ESAC
+      # )
+      # 
+      # inspectdf <- data.frame(
+      #   xs,dens_inspect
+      # )
+      # 
+      # cols = c("x","y")
+      # 
+      # colnames(inspectdf) = cols
+      # colnames(ESACdf) = cols
+      # p = ggplot() +
+      #   geom_line(data = ESACdf, aes(x = x, y = y), color = "blue") +
+      #   geom_line(data = inspectdf, aes(x = x, y = y), color = "red") +
+      #   xlab('estimated change-point location') +
+      #   ylab('density') 
+      
+      dff = data.frame(x = xs, values = c(dens_ESAC, dens_inspect, dens_sbs, dens_subset,dens_dc),
+                       fun = factor(c(rep("FAST", length(xs)), rep("Inspect", length(xs)),
+                                      rep("SBS", length(xs)),rep("SUBSET", length(xs)),rep("DC", length(xs))),levels=c("FAST", "Inspect", "SBS", "SUBSET","DC"))
+      )
+      # dff = data.frame(x = xs, values = c(dens_ESAC, dens_inspect, dens_sbs, dens_subset,dens_dc),
+      #                 fun = as.factor(c(rep("FAST", length(xs)), rep("Inspect", length(xs)),
+      #                         rep("SBS", length(xs)),rep("SUBSET", length(xs)),rep("DC", length(xs))))
+      #                 )
+      #levels(dff$fun) <- c("FAST", "Inspect", "SUBSET", "DC","SBS")
+      
+      kexp = c("", "=\\lceil p^{1/3}\\rceil", "=\\lceil (p\\log n)^{1/2} \\rceil","=p" )[kk]
+      #p = ggplot(dff,aes(x,values,col=fun))+geom_line(size=1.3, aes(linetype=fun)) +
+      p = ggplot(dff,aes(x,values,col=fun))+geom_line(size=1.3, linetype="solid") +
+        theme(legend.position="top",legend.title=element_blank(),text = element_text(size = 40)) +
+        xlab('estimated change-point location')  + scale_color_manual(values = c("red1", "steelblue","gold4","springgreen1","plum3")) +
+        ylab('density')  + 
+        theme(axis.text=element_text(size=20), axis.title=element_text(size=25),plot.title = element_text(size=40,hjust = 0.5)) +
+        ggtitle(TeX(sprintf("Sparsity $k %s = %d$\n",kexp, kfunc(kk,n,p))))
+      
+      
+      #print(p)
+      ggsave(filename = sprintf("%s/i=%d_j=%d_kk=%d.pdf", plotdir,i, j, kk),
+             plot = p,device = "pdf", dpi = 300,height=10,width=14)
+      matplot(xs, cbind(dens_ESAC, dens_inspect, dens_sbs, dens_subset,dens_dc), type="l",
+              col = c(2,3,4,5,6), lty =rep(1,5), lwd = rep(1,5))
+      legend(x = "topright", legend = 
+               c("FAST", "Inspect", "SBS", "SUBSET","DC"), lty=rep(1,5), col = c(2,3,4,5,6), 
+             lwd = rep(2,6))
+      
+    }    
+#  }
+#}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # creating table:
 if(save){
@@ -377,7 +510,7 @@ if(save){
                  "\\begin{adjustbox}{scale=0.9,center}",
                  "\\begin{tabular}{@{\\extracolsep{1pt}} ccccc|ccccc|ccccc}",
                  "\\hline", 
-                 "\\multicolumn{5}{c|}{Parameters} & \\multicolumn{5}{c|}{MSE} &\\multicolumn{5}{c|}{Time in milliseconds} \\\\ \\hline ",
+                 "\\multicolumn{5}{c|}{Parameters} & \\multicolumn{5}{c|}{mae} &\\multicolumn{5}{c|}{Time in milliseconds} \\\\ \\hline ",
                  "$n$ & $p$ & $k$ &  $\\eta$ & $\\phi$ & \\text{FAST} & \\text{Inspect} & \\text{SBS} & \\text{SUBSET} & \\text{DC} & \\text{FAST} & \\text{Inspect} &\\text{SBS} & \\text{SUBSET}& \\text{DC} \\\\", 
                  "\\hline \\")
   
@@ -397,8 +530,8 @@ if(save){
         }
         string = sprintf("%d & %d & %d & %d & %.2f", n, p, k, eta, rootnorm)
         
-        #res = round(c(ESAC_mse[i,j,y],inspect_mse[i,j,y], scan_mse[i,j,y]),digits=3)
-        res = round(c(ESAC_mse[i,j,y],inspect_mse[i,j,y], sbs_mse[i,j,y], subset_mse[i,j,y], dc_mse[i,j,y]),digits=1)
+        #res = round(c(ESAC_mae[i,j,y],inspect_mae[i,j,y], scan_mae[i,j,y]),digits=3)
+        res = round(c(ESAC_mae[i,j,y],inspect_mae[i,j,y], sbs_mae[i,j,y], subset_mae[i,j,y], dc_mae[i,j,y]),digits=1)
         minind = (res==min(res))
         
         for (t in 1:length(res)) {
@@ -426,9 +559,9 @@ if(save){
       }
     }
   }
-  printlines = c(printlines, "\\hline \\multicolumn{5}{c|}{Average MSE}")
+  printlines = c(printlines, "\\hline \\multicolumn{5}{c|}{Average mae}")
   #res = round(c(mean(ESAC_slow_det[,,2:kvals]),mean(ESAC_det[,,2:kvals]),mean(pilliat_det[,,2:kvals]),mean(inspect_det[,,2:kvals]), mean(sbs_det[,,2:kvals]), mean(subset_det[,,2:kvals]), mean(dc_det[,,2:kvals])),digits=3)
-  res = round(c(mean(ESAC_mse),mean(inspect_mse), mean(sbs_mse), mean(subset_mse), mean(dc_mse)),digits=3)
+  res = round(c(mean(ESAC_mae),mean(inspect_mae), mean(sbs_mae), mean(subset_mae), mean(dc_mae)),digits=3)
   minind = (res==min(res))
   string =""
   for (t in 1:length(res)) {
@@ -534,9 +667,9 @@ for (i in 1:length(ns)) {
       #   ylab('density') 
       
       dff = data.frame(x = xs, values = c(dens_ESAC, dens_inspect, dens_sbs, dens_subset,dens_dc),
-                      fun = factor(c(rep("FAST", length(xs)), rep("Inspect", length(xs)),
-                              rep("SBS", length(xs)),rep("SUBSET", length(xs)),rep("DC", length(xs))),levels=c("FAST", "Inspect", "SBS", "SUBSET","DC"))
-                      )
+                       fun = factor(c(rep("FAST", length(xs)), rep("Inspect", length(xs)),
+                                      rep("SBS", length(xs)),rep("SUBSET", length(xs)),rep("DC", length(xs))),levels=c("FAST", "Inspect", "SBS", "SUBSET","DC"))
+      )
       # dff = data.frame(x = xs, values = c(dens_ESAC, dens_inspect, dens_sbs, dens_subset,dens_dc),
       #                 fun = as.factor(c(rep("FAST", length(xs)), rep("Inspect", length(xs)),
       #                         rep("SBS", length(xs)),rep("SUBSET", length(xs)),rep("DC", length(xs))))
@@ -548,11 +681,11 @@ for (i in 1:length(ns)) {
       p = ggplot(dff,aes(x,values,col=fun))+geom_line(size=1.3, linetype="solid") +
         theme(legend.position="top",legend.title=element_blank(),text = element_text(size = 40)) +
         xlab('estimated change-point location')  + scale_color_manual(values = c("red1", "steelblue","gold4","springgreen1","plum3")) +
-           ylab('density')  + 
+        ylab('density')  + 
         theme(axis.text=element_text(size=20), axis.title=element_text(size=25),plot.title = element_text(size=40,hjust = 0.5)) +
         ggtitle(TeX(sprintf("Sparsity $k %s = %d$\n",kexp, kfunc(kk,n,p))))
       
-
+      
       #print(p)
       ggsave(filename = sprintf("%s/i=%d_j=%d_kk=%d.pdf", plotdir,i, j, kk),
              plot = p,device = "pdf", dpi = 300,height=10,width=14)
@@ -655,15 +788,15 @@ for (i in 1:length(ns)) {
 # {
 #   inspect_res_uneven = array(NA, dim = c(length(ns), length(ps), kvals,N) )
 #   inspect_time_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
-#   inspect_mse_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
+#   inspect_mae_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
 #   ESAC_res_uneven = array(NA, dim = c(length(ns), length(ps), kvals,N) )
 #   ESAC_s_uneven = array(NA, dim = c(length(ns), length(ps), kvals,N) )
 #   ESAC_time_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
-#   ESAC_mse_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
+#   ESAC_mae_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
 #   scan_res_uneven = array(NA, dim = c(length(ns), length(ps), kvals,N) )
 #   scan_s_uneven = array(NA, dim = c(length(ns), length(ps), kvals,N) )
 #   scan_time_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
-#   scan_mse_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
+#   scan_mae_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
 #   
 #   for (i in 1:length(ns)) {
 #     n = ns[i]
@@ -674,16 +807,16 @@ for (i in 1:length(ns)) {
 #         inspect_res_uneven[i,j,y,] = result_uneven[6, subset]
 #         inspect_time_uneven[i,j,y] = sum(result_uneven[7, subset])
 #         eta = round(n*0.2)
-#         inspect_mse_uneven[i,j,y] = mean((inspect_res_uneven[i,j,y,] - eta)^2)
+#         inspect_mae_uneven[i,j,y] = mean((inspect_res_uneven[i,j,y,] - eta)^2)
 #         ESAC_res_uneven[i,j,y,] = result_uneven[8, subset]
 #         ESAC_time_uneven[i,j,y] = sum(result_uneven[9, subset])
 #         ESAC_s_uneven[i,j,y,] = result_uneven[10, subset]
-#         ESAC_mse_uneven[i,j,y] = mean((ESAC_res_uneven[i,j,y,] - eta)^2)
+#         ESAC_mae_uneven[i,j,y] = mean((ESAC_res_uneven[i,j,y,] - eta)^2)
 #         
 #         scan_res_uneven[i,j,y,] = result_uneven[11, subset]
 #         scan_time_uneven[i,j,y] = sum(result_uneven[12, subset])
 #         scan_s_uneven[i,j,y,] = result_uneven[13, subset]
-#         scan_mse_uneven[i,j,y] = mean((scan_res_uneven[i,j,y,] - eta)^2)
+#         scan_mae_uneven[i,j,y] = mean((scan_res_uneven[i,j,y,] - eta)^2)
 #       }
 #     }
 #   }
@@ -693,9 +826,9 @@ for (i in 1:length(ns)) {
 # 
 # 
 # 
-# inspect_mse_uneven - ESAC_mse_uneven
-# inspect_mse_uneven
-# ESAC_mse_uneven
+# inspect_mae_uneven - ESAC_mae_uneven
+# inspect_mae_uneven
+# ESAC_mae_uneven
 # 
 # # par(mfrow=c(1,2))
 # # hist(inspect_res_uneven[3,3,1,])
@@ -703,17 +836,17 @@ for (i in 1:length(ns)) {
 # 
 # #saving: 
 # if(save){
-#   saveRDS(inspect_mse_uneven, file=sprintf("%s/inspect_mse_uneven.RDA", savedir))
+#   saveRDS(inspect_mae_uneven, file=sprintf("%s/inspect_mae_uneven.RDA", savedir))
 #   saveRDS(inspect_time_uneven, file=sprintf("%s/inspect_time_uneven.RDA", savedir))
-#   saveRDS(inspect_mse_uneven, file=sprintf("%s/inspect_mse_uneven.RDA", savedir))
+#   saveRDS(inspect_mae_uneven, file=sprintf("%s/inspect_mae_uneven.RDA", savedir))
 #   saveRDS(ESAC_res_uneven, file=sprintf("%s/ESAC_res_uneven.RDA", savedir))
 #   saveRDS(ESAC_s_uneven, file=sprintf("%s/ESAC_s_uneven.RDA", savedir))
 #   saveRDS(ESAC_time_uneven, file=sprintf("%s/ESAC_time_uneven.RDA", savedir))
-#   saveRDS(ESAC_mse_uneven, file=sprintf("%s/ESAC_mse_uneven.RDA", savedir))
+#   saveRDS(ESAC_mae_uneven, file=sprintf("%s/ESAC_mae_uneven.RDA", savedir))
 #   saveRDS(scan_res_uneven, file=sprintf("%s/scan_res_uneven.RDA", savedir))
 #   saveRDS(scan_s_uneven, file=sprintf("%s/scan_s_uneven.RDA", savedir))
 #   saveRDS(scan_time_uneven, file=sprintf("%s/scan_time_uneven.RDA", savedir))
-#   saveRDS(scan_mse_uneven, file=sprintf("%s/scan_mse_uneven.RDA", savedir))
+#   saveRDS(scan_mae_uneven, file=sprintf("%s/scan_mae_uneven.RDA", savedir))
 #   
 # 
 # }
@@ -727,7 +860,7 @@ for (i in 1:length(ns)) {
 #                  "\\small",
 #                  "\\begin{tabular}{@{\\extracolsep{1pt}} ccccc|ccc|ccc}",
 #                  "\\hline", 
-#                  "\\multicolumn{5}{c|}{Parameters} & \\multicolumn{3}{c|}{MSE} &\\multicolumn{3}{c}{Time in miliseconds} \\\\ \\hline ",
+#                  "\\multicolumn{5}{c|}{Parameters} & \\multicolumn{3}{c|}{mae} &\\multicolumn{3}{c}{Time in miliseconds} \\\\ \\hline ",
 #                  "$n$ & $p$ & $k$ &  $\\eta$ & $\\phi$ & \\text{ESAC} & \\text{Inspect} & \\text{Scan} & \\text{ESAC} & \\text{Inspect} & \\text{Scan} \\\\", 
 #                  "\\hline \\")
 #   
@@ -747,7 +880,7 @@ for (i in 1:length(ns)) {
 #         }
 #         string = sprintf("%d & %d & %d & %d & %.2f", n, p, k, eta, rootnorm)
 #         
-#         res = round(c(ESAC_mse_uneven[i,j,y],inspect_mse_uneven[i,j,y], scan_mse_uneven[i,j,y]),digits=3)
+#         res = round(c(ESAC_mae_uneven[i,j,y],inspect_mae_uneven[i,j,y], scan_mae_uneven[i,j,y]),digits=3)
 #         minind = (res==min(res))
 #         
 #         for (t in 1:length(res)) {
@@ -811,11 +944,11 @@ for (i in 1:length(ns)) {
 # # {
 # #   inspect_res_uneven = array(NA, dim = c(length(ns), length(ps), kvals,N) )
 # #   inspect_time_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
-# #   inspect_mse_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
+# #   inspect_mae_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
 # #   ESAC_res_uneven = array(NA, dim = c(length(ns), length(ps), kvals,N) )
 # #   ESAC_s_uneven = array(NA, dim = c(length(ns), length(ps), kvals,N) )
 # #   ESAC_time_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
-# #   ESAC_mse_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
+# #   ESAC_mae_uneven = array(NA, dim= c(length(ns), length(ps), kvals))
 # # }
 # # for (i in 1:length(ns)) {
 # #   n = ns[i]
@@ -880,11 +1013,11 @@ for (i in 1:length(ns)) {
 # #         
 # #       }
 # #       inspect_time_uneven[i,j,y] = tottimeinspect
-# #       inspect_mse_uneven[i,j,y] = mean((inspect_res_uneven[i,j,y,]-eta)^2)
+# #       inspect_mae_uneven[i,j,y] = mean((inspect_res_uneven[i,j,y,]-eta)^2)
 # #       
 # #       
 # #       ESAC_time_uneven[i,j,y] = tottimeESAC
-# #       ESAC_mse_uneven[i,j,y] = mean((ESAC_res_uneven[i,j,y,]-eta)^2)
+# #       ESAC_mae_uneven[i,j,y] = mean((ESAC_res_uneven[i,j,y,]-eta)^2)
 # #       
 # #       
 # #       
@@ -894,13 +1027,13 @@ for (i in 1:length(ns)) {
 # # 
 # # #saving
 # # if(save){
-# #   saveRDS(inspect_mse_uneven, file=sprintf("%s/inspect_mse_uneven.RDA", savedir))
+# #   saveRDS(inspect_mae_uneven, file=sprintf("%s/inspect_mae_uneven.RDA", savedir))
 # #   saveRDS(inspect_time_uneven, file=sprintf("%s/inspect_time_uneven.RDA", savedir))
-# #   saveRDS(inspect_mse_uneven, file=sprintf("%s/inspect_mse_uneven.RDA", savedir))
+# #   saveRDS(inspect_mae_uneven, file=sprintf("%s/inspect_mae_uneven.RDA", savedir))
 # #   saveRDS(ESAC_res_uneven, file=sprintf("%s/ESAC_res_uneven.RDA", savedir))
 # #   saveRDS(ESAC_s_uneven, file=sprintf("%s/ESAC_s_uneven.RDA", savedir))
 # #   saveRDS(ESAC_time_uneven, file=sprintf("%s/ESAC_time_uneven.RDA", savedir))
-# #   saveRDS(ESAC_mse_uneven, file=sprintf("%s/ESAC_mse_uneven.RDA", savedir))
+# #   saveRDS(ESAC_mae_uneven, file=sprintf("%s/ESAC_mae_uneven.RDA", savedir))
 # #   
 # # }
 # # # saving table:
@@ -913,7 +1046,7 @@ for (i in 1:length(ns)) {
 # #                  "\\begin{tabular}{@{\\extracolsep{1pt}} ccccc|cc|cc}",
 # #                  "\\\\[-1.8ex]\\hline", 
 # #                  "\\hline \\\\[-1.8ex]",
-# #                  "$n$ & $p$ & $k$ &  $\\eta$ & $\\phi$ & \\text{ESAC MSE} & \\text{Inspect MSE} & \\text{ESAC (ms)} & \\text{Inspect (ms)} \\\\", 
+# #                  "$n$ & $p$ & $k$ &  $\\eta$ & $\\phi$ & \\text{ESAC mae} & \\text{Inspect mae} & \\text{ESAC (ms)} & \\text{Inspect (ms)} \\\\", 
 # #                  "\\hline \\\\[-1.8ex]")
 # #   
 # #   for (i in 1:length(ns)) {
@@ -941,7 +1074,7 @@ for (i in 1:length(ns)) {
 # #         }
 # #         string = sprintf("%d & %d & %d & %d & %.2f", n, p, k, eta, rootnorm)
 # #         
-# #         res = c(ESAC_mse_uneven[i,j,y],inspect_mse_uneven[i,j,y])
+# #         res = c(ESAC_mae_uneven[i,j,y],inspect_mae_uneven[i,j,y])
 # #         minind = which.min(res)
 # #         if(minind>1){
 # #           for (t in 1:(minind-1)) {
@@ -985,7 +1118,7 @@ for (i in 1:length(ns)) {
 # # 
 # # 
 # # 
-# # inspect_mse_uneven - ESAC_mse_uneven
+# # inspect_mae_uneven - ESAC_mae_uneven
 # # 
 # # inspect_time_uneven / ESAC_time_uneven
 # # 

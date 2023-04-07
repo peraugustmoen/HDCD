@@ -20,20 +20,20 @@ plot(X[1,])
 
 rescale_variance = FALSE
 
-res2 = HDCD (X[,], 1.5,1, alpha = 1+1/6, K = 7, threshold_d_test = 2, fast =TRUE,droppartialsum = TRUE,
+res2 = ESAC (X[,], 1.5,1, alpha = 1+1/6, K = 7, threshold_d_test = 2, fast =TRUE,droppartialsum = TRUE,
              threshold_s_test = 1,rescale_variance = rescale_variance, debug= TRUE)
 res2$changepoints
 
 
-# res2 = HDCD (X[,], 1.5,1, alpha = 1+1/6, K = 7, threshold_d_test = 2, fast =TRUE,droppartialsum = TRUE,
+# res2 = ESAC (X[,], 1.5,1, alpha = 1+1/6, K = 7, threshold_d_test = 2, fast =TRUE,droppartialsum = TRUE,
 #              threshold_s_test = 1,rescale_variance = rescale_variance, NOT = FALSE,debug= FALSE)
 # res2$changepoints
 
-res3 = HDCD (X[,], 1.5,1, alpha = 1.2, K = 4, threshold_d_test = 2, fast =FALSE,droppartialsum =TRUE,
+res3 = ESAC (X[,], 1.5,1, alpha = 1.2, K = 4, threshold_d_test = 2, fast =FALSE,droppartialsum =TRUE,
              threshold_s_test = 1,rescale_variance = rescale_variance, debug= TRUE)
 res3$changepoints
 
-res3 = HDCD (X[,], 1.5,1, alpha = 1.2, K = 4, threshold_d_test = 2, fast =FALSE,droppartialsum =TRUE,
+res3 = ESAC (X[,], 1.5,1, alpha = 1.2, K = 4, threshold_d_test = 2, fast =FALSE,droppartialsum =TRUE,
              threshold_s_test = 1,rescale_variance = rescale_variance,trim=FALSE, midpoint=TRUE,debug= FALSE)
 res3$changepoints
 #X[2,] = 10*X[2,]
@@ -55,21 +55,21 @@ system.time({res = Inspect(X[,], xi=xi, alpha = 1+1/6, K = 7,eps=1e-10,
 res$changepoints
 
 
-system.time({res2 = HDCD (X[,], 2,1, alpha = 1+1/6, K = 7, threshold_d_test = 2, 
+system.time({res2 = ESAC (X[,], 2,1, alpha = 1+1/6, K = 7, threshold_d_test = 2, 
                           threshold_s_test = 1,rescale_variance = rescale_variance,debug= FALSE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res2$changepoints
 res2$s
 #res2$coordinate
 
-system.time({res3 = HDCD (X[,], 2,1, alpha = 1+1/6, K = 7, threshold_d_test = 2, 
+system.time({res3 = ESAC (X[,], 2,1, alpha = 1+1/6, K = 7, threshold_d_test = 2, 
                           threshold_s_test = 1, droppartialsum = TRUE,debug= FALSE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res3$changepoints
 res3$s
 #res2$coordinate
 
-system.time({res4 = HDCD (X[,], 1.5,1, alpha = 2, K = 4, threshold_d_test = 2, 
+system.time({res4 = ESAC (X[,], 1.5,1, alpha = 2, K = 4, threshold_d_test = 2, 
                           threshold_s_test = 1, droppartialsum = FALSE, fast =TRUE,debug= FALSE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res4$changepoints
@@ -80,9 +80,9 @@ res4$endpoints
 # 
 # N = 500
 # tol = 1/n
-# thr = changepoint_test_HDCD_calibrate (n,p, as=NULL, nu_as=NULL, ts=NULL, twologn=NULL, N, tol,debug=TRUE)
+# thr = changepoint_test_ESAC_calibrate (n,p, as=NULL, nu_as=NULL, ts=NULL, twologn=NULL, N, tol,debug=TRUE)
 # thr
-# system.time({res5 = HDCD (X[,], 2,2, empirical=TRUE,alpha = 1+1/6, K = 2,thresholds_test = 2*( thr$with_partial), threshold_d = 2, 
+# system.time({res5 = ESAC (X[,], 2,2, empirical=TRUE,alpha = 1+1/6, K = 2,thresholds_test = 2*( thr$with_partial), threshold_d = 2, 
 #                           threshold_s = 2, droppartialsum = FALSE, fast =TRUE,debug= FALSE)})
 # #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 # res5$changepoints
@@ -99,37 +99,37 @@ system.time({res6= Pilliat(X, threshold_d_const=1.5, threshold_bj_const=6, thres
 res6$changepoints
 
 # checking empirical: 
-cc = HDCD_calibrate(n,p, N=1000, tol=0.001,alpha = 2, K = 4, fast=TRUE, bonferroni = TRUE,
+cc = ESAC_calibrate(n,p, N=1000, tol=0.001,alpha = 2, K = 4, fast=TRUE, bonferroni = TRUE,
                     debug=FALSE, rescale_variance = rescale_variance)
 
-system.time({res7 = HDCD (X[,], 2,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = cc[[2]], droppartialsum = FALSE, fast =TRUE,
+system.time({res7 = ESAC (X[,], 2,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = cc[[2]], droppartialsum = FALSE, fast =TRUE,
                           rescale_variance = rescale_variance, debug= TRUE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res7$changepoints
 res7$s
 
-system.time({res8 = HDCD (X[,], 2,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = cc[[1]], droppartialsum = TRUE, fast =TRUE,
+system.time({res8 = ESAC (X[,], 2,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = cc[[1]], droppartialsum = TRUE, fast =TRUE,
                           rescale_variance = rescale_variance, debug= FALSE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res8$changepoints
 res8$s
 
-cc2 = HDCD_calibrate(n,p, N=1000, tol=0.001,K=4,alpha = 1+1/5,fast=FALSE,
+cc2 = ESAC_calibrate(n,p, N=1000, tol=0.001,K=4,alpha = 1+1/5,fast=FALSE,
                      rescale_variance = rescale_variance, debug=FALSE)
 
-system.time({res9 = HDCD (X[,], 2,1, empirical=TRUE,alpha = 1+1/5, K = 4, 
+system.time({res9 = ESAC (X[,], 2,1, empirical=TRUE,alpha = 1+1/5, K = 4, 
                           rescale_variance = rescale_variance, thresholds_test = cc2[[2]], droppartialsum = FALSE, fast =FALSE,debug= FALSE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res9$changepoints
 res9$s
 
-system.time({res10 = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 1+1/6, K = 2, thresholds_test = cc2[[1]], droppartialsum = TRUE, fast =FALSE,
+system.time({res10 = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 1+1/6, K = 2, thresholds_test = cc2[[1]], droppartialsum = TRUE, fast =FALSE,
                            rescale_variance = rescale_variance, debug= FALSE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res10$changepoints
 res10$s
 
-system.time({res101 = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 1+1/6, K = 2, thresholds_test = cc2[[1]], droppartialsum = TRUE, fast =FALSE,
+system.time({res101 = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 1+1/6, K = 2, thresholds_test = cc2[[1]], droppartialsum = TRUE, fast =FALSE,
                            rescale_variance = rescale_variance, debug= FALSE, cutoff = 0.2)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res101$changepoints
@@ -243,22 +243,22 @@ res20[[2]]
 # checking the modified (logn instead of logn4)
 
 
-system.time({res2 = HDCD_modified (X[,], 4,1, alpha = 1+1/6, K = 7, threshold_d_test = 4, 
+system.time({res2 = ESAC_modified (X[,], 4,1, alpha = 1+1/6, K = 7, threshold_d_test = 4, 
                           threshold_s_test = 2, debug= FALSE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res2$changepoints
 res2$s
 #res2$coordinate
-ccc = HDCD_modified_calibrate(n,p, N=1000, tol=0.001,debug=FALSE)
+ccc = ESAC_modified_calibrate(n,p, N=1000, tol=0.001,debug=FALSE)
 
-system.time({res3 = HDCD_modified (X[,], 3,2, alpha = 1+1/6, K = 7, threshold_d_test = 3, 
+system.time({res3 = ESAC_modified (X[,], 3,2, alpha = 1+1/6, K = 7, threshold_d_test = 3, 
                           threshold_s_test = 1, droppartialsum = TRUE,debug= FALSE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res3$changepoints
 res3$s
 #res2$coordinate
 
-system.time({res4 = HDCD_modified (X[,], 3,2, alpha = 1+1/6, K = 2, threshold_d_test = 3, 
+system.time({res4 = ESAC_modified (X[,], 3,2, alpha = 1+1/6, K = 2, threshold_d_test = 3, 
                           threshold_s_test = 1, droppartialsum = FALSE, fast =TRUE,debug= FALSE)})
 #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 res4$changepoints
@@ -277,7 +277,7 @@ res4$endpoints
 
 
 
-rez = single_HDCD(X[,1:etas[2]], 4, 4)
+rez = single_ESAC(X[,1:etas[2]], 4, 4)
 rez
 
 
@@ -286,7 +286,7 @@ rez
 
 # 
 # 
-# res3 = HDCD (X, 4,sqrt(2), alpha = 1+1/6, K = 7, debug =FALSE)
+# res3 = ESAC (X, 4,sqrt(2), alpha = 1+1/6, K = 7, debug =FALSE)
 # #NOTE: 8, 2 corresponds to EQUAL PENALTIES
 # res3$changepoints
 # 
@@ -322,7 +322,7 @@ rez
 #               lambda = lambda, maxiter=10000,debug=FALSE)
 # res$changepoints
 # 
-# res2 = HDCD (X, 8, 36, alpha = 1+1/6, K = 7, debug =TRUE)
+# res2 = ESAC (X, 8, 36, alpha = 1+1/6, K = 7, debug =TRUE)
 # res2$changepoints
 # s=-1
 # cusum = .Call(CUSUM_R, X , as.integer(s), as.integer(e), as.integer(P), as.integer(n))

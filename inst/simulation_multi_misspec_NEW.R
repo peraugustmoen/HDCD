@@ -1,7 +1,7 @@
 #### Simulation for multiple change-points
 #install.packages("InspectChangepoint", repos = "http:cran.us.r-project.org")
 #install.packages("hdbinseg",repos = "http:cran.us.r-project.org")
-#install.packages("/mn/sarpanitu/ansatte-u2/pamoen/project_inspect/simulations_nov_22/HDCD", repos=NULL, type="source")
+#install.packages("/mn/sarpanitu/ansatte-u2/pamoen/project_inspect/simulations_nov_22/ESAC", repos=NULL, type="source")
 
 library(doSNOW)
 library(HDCD)
@@ -87,7 +87,7 @@ if(calibrated){
     rez = list()
     nind = floor(z/length(ps))+1
     pind = z%%length(ps)+1
-    cc = HDCD_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=4, alpha = 1.5, fast = FALSE,
+    cc = ESAC_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=4, alpha = 1.5, fast = FALSE,
                         rescale_variance = rescale_variance, 
                         bonferroni = TRUE, debug=FALSE)
     
@@ -436,50 +436,50 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         rezi[["y"]] = y
         rezi[["h"]] = h
         
-        # hdcd_fast
+        # ESAC_fast
         #xi = 4*sqrt(log(p*n))
         #lambda = sqrt(log(p*log(n)))
         lambda = sqrt(log(p*log(n))/2)
         
         
         a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[1]], droppartialsum = TRUE, fast =FALSE,
+        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[1]], droppartialsum = TRUE, fast =FALSE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
-        rezi[["hdcd_fast_time"]] = (b-a)[1]+(b-a)[2]
-        rezi[["hdcd_fast_K"]]= res$changepointnumber
-        rezi[["hdcd_fast_chgpts"]]= res$changepoints
-        rezi[["hdcd_fast_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["hdcd_fast_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["hdcd_fast_ari"]] = ARI(etas, res$changepoints, n)
+        rezi[["ESAC_fast_time"]] = (b-a)[1]+(b-a)[2]
+        rezi[["ESAC_fast_K"]]= res$changepointnumber
+        rezi[["ESAC_fast_chgpts"]]= res$changepoints
+        rezi[["ESAC_fast_hausd"]] = hausdorff(res$changepoints, etas,n)
+        rezi[["ESAC_fast_K_error"]] = length(res$changepoints) - length(etas)
+        rezi[["ESAC_fast_ari"]] = ARI(etas, res$changepoints, n)
         
         # a = proc.time()
-        # #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        # res = HDCD (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 5, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[10]], droppartialsum = TRUE, fast =FALSE,
+        # #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+        # res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 5, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[10]], droppartialsum = TRUE, fast =FALSE,
         #             rescale_variance = rescale_variance, debug= FALSE)
         # b=proc.time()
-        # rezi[["hdcd_long_time"]] = (b-a)[1]+(b-a)[2]
-        # rezi[["hdcd_long_K"]]= res$changepointnumber
-        # rezi[["hdcd_long_chgpts"]]= res$changepoints
-        # rezi[["hdcd_long_hausd"]] = hausdorff(res$changepoints, etas,n)
-        # rezi[["hdcd_long_K_error"]] = length(res$changepoints) - length(etas)
-        # rezi[["hdcd_long_ari"]] = ARI(etas, res$changepoints, n)
-        # hdcd
+        # rezi[["ESAC_long_time"]] = (b-a)[1]+(b-a)[2]
+        # rezi[["ESAC_long_K"]]= res$changepointnumber
+        # rezi[["ESAC_long_chgpts"]]= res$changepoints
+        # rezi[["ESAC_long_hausd"]] = hausdorff(res$changepoints, etas,n)
+        # rezi[["ESAC_long_K_error"]] = length(res$changepoints) - length(etas)
+        # rezi[["ESAC_long_ari"]] = ARI(etas, res$changepoints, n)
+        # ESAC
         
         # slow FAST:
         # a = proc.time()
-        # res  = HDCD (X, 2,2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[4]] , droppartialsum = FALSE, fast =FALSE,debug= FALSE)
+        # res  = ESAC (X, 2,2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[4]] , droppartialsum = FALSE, fast =FALSE,debug= FALSE)
         # b=proc.time()
         #
-        # rezi[["hdcd_time"]] = (b-a)[1]+(b-a)[2]
-        # rezi[["hdcd_K"]] = res$changepointnumber
-        # rezi[["hdcd_chgpts"]]= res$changepoints
-        # rezi[["hdcd_hausd"]] = hausdorff(res$changepoints, etas,n)
-        # rezi[["hdcd_K_error"]] = length(res$changepoints) - length(etas)
-        # rezi[["hdcd_ari"]] = ARI(etas, res$changepoints, n)
+        # rezi[["ESAC_time"]] = (b-a)[1]+(b-a)[2]
+        # rezi[["ESAC_K"]] = res$changepointnumber
+        # rezi[["ESAC_chgpts"]]= res$changepoints
+        # rezi[["ESAC_hausd"]] = hausdorff(res$changepoints, etas,n)
+        # rezi[["ESAC_K_error"]] = length(res$changepoints) - length(etas)
+        # rezi[["ESAC_ari"]] = ARI(etas, res$changepoints, n)
         #
-        # hdcd slow
+        # ESAC slow
         # if(dim(X)[2]>500){
         #   rezi[["pilliat_time"]] = NA
         #   rezi[["pilliat_K"]] = NA
@@ -490,7 +490,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         # }
         # else{
         #a = proc.time()
-        #res = HDCD (X, 2,2, alpha = 1+1/6, K = 4, threshold_d_test = 1.5,
+        #res = ESAC (X, 2,2, alpha = 1+1/6, K = 4, threshold_d_test = 1.5,
         #            threshold_s_test = 1.5, droppartialsum = FALSE, fast =FALSE,debug= FALSE)
         #b=proc.time()
         
@@ -512,7 +512,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         
         #inspect
         a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
         res = Inspect(X[,], xi=(calibrates[[j+(i-1)*length(ps)]])[[3]], alpha = 1.5, K = 4,eps=1e-10,
                       lambda = lambda, maxiter=10000,
                       rescale_variance = rescale_variance, debug=FALSE)
@@ -528,7 +528,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         
         # subset
         a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
         if(rescale_variance){
           res = change_main(InspectChangepoint::rescale.variance(X), SUBSET.normal, 100,penalties= (calibrates[[j+(i-1)*length(ps)]])[[9]])
         }else{
@@ -546,7 +546,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         
         # SBS
         a = proc.time()
-        #res  = HDCD (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
+        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
         res = sbs.alg(X[,], cp.type = 1, thr = NULL, trim = NULL, height = NULL,
                       temporal = TRUE, scales = NULL, diag = FALSE, B = 100, q = 0.01,
                       do.parallel = 1)
@@ -601,15 +601,15 @@ close(pb)
 stopCluster(cl)
 
 {
-  hdcd_fast_hausd = array(0, dim = c(2, numconfig) )
-  hdcd_fast_Kerr = array(0, dim = c(2, numconfig) )
-  hdcd_fast_time = array(0, dim= c(2, numconfig))
-  hdcd_fast_ari = array(0, dim= c(2, numconfig))
+  ESAC_fast_hausd = array(0, dim = c(2, numconfig) )
+  ESAC_fast_Kerr = array(0, dim = c(2, numconfig) )
+  ESAC_fast_time = array(0, dim= c(2, numconfig))
+  ESAC_fast_ari = array(0, dim= c(2, numconfig))
   
-  # hdcd_long_hausd = array(0, dim = c(2, numconfig) )
-  # hdcd_long_Kerr = array(0, dim = c(2, numconfig) )
-  # hdcd_long_time = array(0, dim= c(2, numconfig))
-  # hdcd_long_ari = array(0, dim= c(2, numconfig))
+  # ESAC_long_hausd = array(0, dim = c(2, numconfig) )
+  # ESAC_long_Kerr = array(0, dim = c(2, numconfig) )
+  # ESAC_long_time = array(0, dim= c(2, numconfig))
+  # ESAC_long_ari = array(0, dim= c(2, numconfig))
   
   inspect_hausd = array(0, dim = c(2, numconfig) )
   inspect_Kerr = array(0, dim = c(2, numconfig) )
@@ -637,8 +637,8 @@ stopCluster(cl)
   dc_ari = array(0, dim= c(2, numconfig))
   
   pilliat_hausd[1,] = NA
-  #hdcd_long_hausd[,,1] = NA
-  hdcd_fast_hausd[1,] = NA
+  #ESAC_long_hausd[,,1] = NA
+  ESAC_fast_hausd[1,] = NA
   inspect_hausd[1,] = NA
   subset_hausd[1,] = NA
   sbs_hausd[1,] = NA
@@ -653,24 +653,24 @@ stopCluster(cl)
       y = sublist[["y"]]
       h = sublist[["h"]]
       
-      hdcd_fast_Kerr[h,y] = hdcd_fast_Kerr[h,y] + abs(sublist[["hdcd_fast_K_error"]])/N
-      #hdcd_long_Kerr[h,y] = hdcd_long_Kerr[h,y] + abs(sublist[["hdcd_long_K_error"]])/N
+      ESAC_fast_Kerr[h,y] = ESAC_fast_Kerr[h,y] + abs(sublist[["ESAC_fast_K_error"]])/N
+      #ESAC_long_Kerr[h,y] = ESAC_long_Kerr[h,y] + abs(sublist[["ESAC_long_K_error"]])/N
       pilliat_Kerr[h,y] = pilliat_Kerr[h,y] + abs(sublist[["pilliat_K_error"]])/N
       inspect_Kerr[h,y] = inspect_Kerr[h,y] + abs(sublist[["inspect_K_error"]])/N
       subset_Kerr[h,y] = subset_Kerr[h,y] + abs(sublist[["subset_K_error"]])/N
       sbs_Kerr[h,y] = sbs_Kerr[h,y] + abs(sublist[["sbs_K_error"]])/N
       dc_Kerr[h,y] = dc_Kerr[h,y] + abs(sublist[["dc_K_error"]])/N
       
-      hdcd_fast_time[h,y] = hdcd_fast_time[h,y] + sublist[["hdcd_fast_time"]]/N
-      #hdcd_long_time[h,y] = hdcd_long_time[h,y] + sublist[["hdcd_long_time"]]/N
+      ESAC_fast_time[h,y] = ESAC_fast_time[h,y] + sublist[["ESAC_fast_time"]]/N
+      #ESAC_long_time[h,y] = ESAC_long_time[h,y] + sublist[["ESAC_long_time"]]/N
       pilliat_time[h,y] = pilliat_time[h,y] + sublist[["pilliat_time"]]/N
       inspect_time[h,y] = inspect_time[h,y] + sublist[["inspect_time"]]/N
       subset_time[h,y] = subset_time[h,y] + sublist[["subset_time"]]/N
       sbs_time[h,y] = sbs_time[h,y] + sublist[["sbs_time"]]/N
       dc_time[h,y] = dc_time[h,y] + sublist[["dc_time"]]/N
       
-      hdcd_fast_ari[h,y] = hdcd_fast_ari[h,y] + sublist[["hdcd_fast_ari"]]/N
-      #hdcd_long_ari[h,y] = hdcd_long_ari[h,y] + sublist[["hdcd_long_ari"]]/N
+      ESAC_fast_ari[h,y] = ESAC_fast_ari[h,y] + sublist[["ESAC_fast_ari"]]/N
+      #ESAC_long_ari[h,y] = ESAC_long_ari[h,y] + sublist[["ESAC_long_ari"]]/N
       pilliat_ari[h,y] = pilliat_ari[h,y] + sublist[["pilliat_ari"]]/N
       inspect_ari[h,y] = inspect_ari[h,y] + sublist[["inspect_ari"]]/N
       subset_ari[h,y] = subset_ari[h,y] + sublist[["subset_ari"]]/N
@@ -678,12 +678,12 @@ stopCluster(cl)
       dc_ari[h,y] = dc_ari[h,y] + sublist[["dc_ari"]]/N
       
       # if(i==1 & j ==1 & y==1){
-      #   print(sublist[["hdcd_ari"]])
+      #   print(sublist[["ESAC_ari"]])
       # }
       
       if(h!= 1){
-        hdcd_fast_hausd[h,y] = hdcd_fast_hausd[h,y] + sublist[["hdcd_fast_hausd"]]/N
-        #hdcd_long_hausd[h,y] = hdcd_long_hausd[h,y] + sublist[["hdcd_long_hausd"]]/N
+        ESAC_fast_hausd[h,y] = ESAC_fast_hausd[h,y] + sublist[["ESAC_fast_hausd"]]/N
+        #ESAC_long_hausd[h,y] = ESAC_long_hausd[h,y] + sublist[["ESAC_long_hausd"]]/N
         pilliat_hausd[h,y] = pilliat_hausd[h,y] + sublist[["pilliat_hausd"]]/N
         inspect_hausd[h,y] = inspect_hausd[h,y] + sublist[["inspect_hausd"]]/N
         subset_hausd[h,y] = subset_hausd[h,y] + sublist[["subset_hausd"]]/N
@@ -702,15 +702,15 @@ stopCluster(cl)
 
 if(save){
   saveRDS(result, file=sprintf("%s/result.RDA", savedir))
-  saveRDS(hdcd_fast_hausd, file=sprintf("%s/hdcd_fast_haus.RDA", savedir))
-  saveRDS(hdcd_fast_time, file=sprintf("%s/hdcd_fast_time.RDA", savedir))
-  saveRDS(hdcd_fast_Kerr, file=sprintf("%s/hdcd_fast_Kerr.RDA", savedir))
-  saveRDS(hdcd_fast_ari, file=sprintf("%s/hdcd_fast_ari.RDA", savedir))
+  saveRDS(ESAC_fast_hausd, file=sprintf("%s/ESAC_fast_haus.RDA", savedir))
+  saveRDS(ESAC_fast_time, file=sprintf("%s/ESAC_fast_time.RDA", savedir))
+  saveRDS(ESAC_fast_Kerr, file=sprintf("%s/ESAC_fast_Kerr.RDA", savedir))
+  saveRDS(ESAC_fast_ari, file=sprintf("%s/ESAC_fast_ari.RDA", savedir))
   
-  # saveRDS(hdcd_long_hausd, file=sprintf("%s/hdcd_long_haus.RDA", savedir))
-  # saveRDS(hdcd_long_time, file=sprintf("%s/hdcd_long_time.RDA", savedir))
-  # saveRDS(hdcd_long_Kerr, file=sprintf("%s/hdcd_long_Kerr.RDA", savedir))
-  # saveRDS(hdcd_long_ari, file=sprintf("%s/hdcd_long_ari.RDA", savedir))
+  # saveRDS(ESAC_long_hausd, file=sprintf("%s/ESAC_long_haus.RDA", savedir))
+  # saveRDS(ESAC_long_time, file=sprintf("%s/ESAC_long_time.RDA", savedir))
+  # saveRDS(ESAC_long_Kerr, file=sprintf("%s/ESAC_long_Kerr.RDA", savedir))
+  # saveRDS(ESAC_long_ari, file=sprintf("%s/ESAC_long_ari.RDA", savedir))
   
   saveRDS(inspect_hausd, file=sprintf("%s/inspect_haus.RDA", savedir))
   saveRDS(inspect_time, file=sprintf("%s/inspect_time.RDA", savedir))
@@ -821,9 +821,9 @@ if(save){
             
           }
         }else{
-          res = round(c(hdcd_fast_hausd[h,y],  pilliat_hausd[h,y], inspect_hausd[h,y], sbs_hausd[h,y], subset_hausd[h,y],dc_hausd[h,y]),digits=3)
+          res = round(c(ESAC_fast_hausd[h,y],  pilliat_hausd[h,y], inspect_hausd[h,y], sbs_hausd[h,y], subset_hausd[h,y],dc_hausd[h,y]),digits=3)
           minind = (res==min(na.omit(res)))
-          #res = c(hdcd_fast_hausd[h,y],hdcd_long_hausd[h,y], pilliat_hausd[h,y], inspect_hausd[h,y], sbs_hausd[h,y], subset_hausd[h,y],dc_hausd[h,y])
+          #res = c(ESAC_fast_hausd[h,y],ESAC_long_hausd[h,y], pilliat_hausd[h,y], inspect_hausd[h,y], sbs_hausd[h,y], subset_hausd[h,y],dc_hausd[h,y])
           
           for (t in 1:length(res)) {
             if(is.na(res[t])){
@@ -837,9 +837,9 @@ if(save){
           }
         }
         
-        res = round(c(hdcd_fast_Kerr[h,y], pilliat_Kerr[h,y], inspect_Kerr[h,y], sbs_Kerr[h,y], subset_Kerr[h,y],dc_Kerr[h,y]),digits=3)
+        res = round(c(ESAC_fast_Kerr[h,y], pilliat_Kerr[h,y], inspect_Kerr[h,y], sbs_Kerr[h,y], subset_Kerr[h,y],dc_Kerr[h,y]),digits=3)
         minind = (abs(res)==min(abs(res)))
-        #res = c(hdcd_fast_Kerr[i,j,y], hdcd_long_Kerr[i,j,y],pilliat_Kerr[i,j,y], inspect_Kerr[i,j,y], sbs_Kerr[i,j,y], subset_Kerr[i,j,y],dc_Kerr[i,j,y])
+        #res = c(ESAC_fast_Kerr[i,j,y], ESAC_long_Kerr[i,j,y],pilliat_Kerr[i,j,y], inspect_Kerr[i,j,y], sbs_Kerr[i,j,y], subset_Kerr[i,j,y],dc_Kerr[i,j,y])
         
         for (t in 1:length(res)) {
           if(minind[t]){
@@ -849,9 +849,9 @@ if(save){
           }
         }
         
-        # res = round(c(hdcd_fast_ari[i,j,y], hdcd_long_ari[i,j,y],pilliat_ari[i,j,y], inspect_ari[i,j,y], sbs_ari[i,j,y], subset_ari[i,j,y],dc_ari[i,j,y]),digits=3)
+        # res = round(c(ESAC_fast_ari[i,j,y], ESAC_long_ari[i,j,y],pilliat_ari[i,j,y], inspect_ari[i,j,y], sbs_ari[i,j,y], subset_ari[i,j,y],dc_ari[i,j,y]),digits=3)
         # minind = (abs(res)==max(abs(res)))
-        # res = c(hdcd_fast_ari[i,j,y], hdcd_long_ari[i,j,y],pilliat_ari[i,j,y], inspect_ari[i,j,y], sbs_ari[i,j,y], subset_ari[i,j,y],dc_ari[i,j,y])
+        # res = c(ESAC_fast_ari[i,j,y], ESAC_long_ari[i,j,y],pilliat_ari[i,j,y], inspect_ari[i,j,y], sbs_ari[i,j,y], subset_ari[i,j,y],dc_ari[i,j,y])
         # for (t in 1:length(res)) {
         #   if(minind[t]){
         #     string = sprintf("%s & \\textbf{%.3f} ", string, res[t])

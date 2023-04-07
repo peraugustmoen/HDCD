@@ -1,7 +1,7 @@
 #### Simulation for multiple change-points
 #install.packages("InspectChangepoint", repos = "http:cran.us.r-project.org")
 #install.packages("hdbinseg",repos = "http:cran.us.r-project.org")
-#install.packages("/mn/sarpanitu/ansatte-u2/pamoen/project_inspect/simulations_nov_22/HDCD", repos=NULL, type="source")
+#install.packages("/mn/sarpanitu/ansatte-u2/pamoen/project_inspect/simulations_nov_22/ESAC", repos=NULL, type="source")
 
 library(doSNOW)
 library(HDCD)
@@ -348,13 +348,13 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
       rezi["inspect_time"] = (b-a)[1]+(b-a)[2]
       rezi["inspect_res"]= res_inspect$pos
       
-      # then hdcd
+      # then ESAC
       a = proc.time()
-      res_hdcd  = single_HDCD(X[,], 1.5,1, debug =FALSE)
+      res_ESAC  = single_ESAC(X[,], 1.5,1, debug =FALSE)
       b=proc.time()
-      rezi["hdcd_time"] = (b-a)[1]+(b-a)[2]
-      rezi["hdcd_res"] = res_hdcd$pos
-      rezi["hdcd_s"] = res_hdcd$s
+      rezi["ESAC_time"] = (b-a)[1]+(b-a)[2]
+      rezi["ESAC_res"] = res_ESAC$pos
+      rezi["ESAC_s"] = res_ESAC$s
       
       # then scan
       # a = proc.time()
@@ -366,7 +366,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
       
       
       
-      #rez = cbind(rez, c(z,i,j,y,k,inspect_res, inspect_time, hdcd_res, hdcd_time,hdcd_s, scan_res, scan_time, scan_s))
+      #rez = cbind(rez, c(z,i,j,y,k,inspect_res, inspect_time, ESAC_res, ESAC_time,ESAC_s, scan_res, scan_time, scan_s))
       
       # then subset
       a = proc.time()
@@ -388,7 +388,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
       #rezi["mu"] = mus
       rezi["eta"] = eta
       
-      # rezi = list(z,i,j,y,k,inspect_res, inspect_time, hdcd_res, hdcd_time,hdcd_s, scan_res, scan_time, scan_s, sbs_res, sbs_time, 
+      # rezi = list(z,i,j,y,k,inspect_res, inspect_time, ESAC_res, ESAC_time,ESAC_s, scan_res, scan_time, scan_s, sbs_res, sbs_time, 
       #                   subset_res, subset_time, dc_res, dc_time)
       
       rez[[counter]] = rezi
@@ -411,10 +411,10 @@ stopCluster(cl)
   inspect_res = array(NA, dim = c(2,numconfig,N) )
   inspect_time = array(0, dim= c(2,numconfig))
   inspect_mse = array(0, dim= c(2,numconfig))
-  hdcd_res = array(NA, dim = c(2,numconfig,N) )
-  hdcd_s = array(NA, dim = c(2,numconfig,N) )
-  hdcd_time = array(0, dim= c(2,numconfig))
-  hdcd_mse = array(0, dim= c(2,numconfig))
+  ESAC_res = array(NA, dim = c(2,numconfig,N) )
+  ESAC_s = array(NA, dim = c(2,numconfig,N) )
+  ESAC_time = array(0, dim= c(2,numconfig))
+  ESAC_mse = array(0, dim= c(2,numconfig))
   scan_res = array(NA, dim = c(2,numconfig,N) )
   scan_s = array(NA, dim = c(2,numconfig,N) )
   scan_time = array(0, dim= c(2,numconfig))
@@ -443,9 +443,9 @@ stopCluster(cl)
       inspect_time[h,y] = inspect_time[h,y] +  sublist["inspect_time"][[1]]/N
       inspect_mse[h,y] = inspect_mse[h,y] + (inspect_res[h,y,z] - eta)^2/N
       
-      hdcd_res[h,y,z] = sublist["hdcd_res"][[1]]
-      hdcd_time[h,y] = hdcd_time[h,y] + sublist["hdcd_time"][[1]]/N
-      hdcd_mse[h,y] = hdcd_mse[h,y] + (hdcd_res[h,y,z] - eta)^2/N
+      ESAC_res[h,y,z] = sublist["ESAC_res"][[1]]
+      ESAC_time[h,y] = ESAC_time[h,y] + sublist["ESAC_time"][[1]]/N
+      ESAC_mse[h,y] = ESAC_mse[h,y] + (ESAC_res[h,y,z] - eta)^2/N
       
       sbs_res[h,y,z] = sublist["sbs_res"][[1]]
       sbs_time[h,y] = sbs_time[h,y] +  sublist["sbs_time"][[1]]/N
@@ -473,10 +473,10 @@ stopCluster(cl)
   #       inspect_time[i,j,y] = sum(result[7, subset])
   #       eta = round(n*0.2)
   #       inspect_mse[i,j,y] = mean((inspect_res[i,j,y,] - eta)^2)
-  #       hdcd_res[i,j,y,] = result[8, subset]
-  #       hdcd_time[i,j,y] = sum(result[9, subset])
-  #       hdcd_s[i,j,y,] = result[10, subset]
-  #       hdcd_mse[i,j,y] = mean((hdcd_res[i,j,y,] - eta)^2)
+  #       ESAC_res[i,j,y,] = result[8, subset]
+  #       ESAC_time[i,j,y] = sum(result[9, subset])
+  #       ESAC_s[i,j,y,] = result[10, subset]
+  #       ESAC_mse[i,j,y] = mean((ESAC_res[i,j,y,] - eta)^2)
   #       
   #       scan_res[i,j,y,] = result[11, subset]
   #       scan_time[i,j,y] = sum(result[12, subset])
@@ -503,23 +503,23 @@ stopCluster(cl)
 
 
 
-inspect_mse - hdcd_mse
+inspect_mse - ESAC_mse
 inspect_mse
-hdcd_mse
+ESAC_mse
 
 par(mfrow=c(1,2))
 hist(inspect_res[1,2,4,])
-hist(hdcd_res[1,2,4,])
+hist(ESAC_res[1,2,4,])
 
 #saving: 
 if(save){
   saveRDS(inspect_mse, file=sprintf("%s/inspect_mse.RDA", savedir))
   saveRDS(inspect_time, file=sprintf("%s/inspect_time.RDA", savedir))
   saveRDS(inspect_res, file=sprintf("%s/inspect_res.RDA", savedir))
-  saveRDS(hdcd_res, file=sprintf("%s/hdcd_res.RDA", savedir))
-  saveRDS(hdcd_s, file=sprintf("%s/hdcd_s.RDA", savedir))
-  saveRDS(hdcd_time, file=sprintf("%s/hdcd_time.RDA", savedir))
-  saveRDS(hdcd_mse, file=sprintf("%s/hdcd_mse.RDA", savedir))
+  saveRDS(ESAC_res, file=sprintf("%s/ESAC_res.RDA", savedir))
+  saveRDS(ESAC_s, file=sprintf("%s/ESAC_s.RDA", savedir))
+  saveRDS(ESAC_time, file=sprintf("%s/ESAC_time.RDA", savedir))
+  saveRDS(ESAC_mse, file=sprintf("%s/ESAC_mse.RDA", savedir))
   saveRDS(scan_res, file=sprintf("%s/scan_res.RDA", savedir))
   saveRDS(scan_s, file=sprintf("%s/scan_s.RDA", savedir))
   saveRDS(scan_time, file=sprintf("%s/scan_time.RDA", savedir))
@@ -596,8 +596,8 @@ if(save){
         }
         string = sprintf("%s & %s", models[y], dens)
         
-        #res = round(c(hdcd_mse[i,j,y],inspect_mse[i,j,y], scan_mse[i,j,y]),digits=3)
-        res = round(c(hdcd_mse[h,y],inspect_mse[h,y], sbs_mse[h,y], subset_mse[h,y], dc_mse[h,y]),digits=1)
+        #res = round(c(ESAC_mse[i,j,y],inspect_mse[i,j,y], scan_mse[i,j,y]),digits=3)
+        res = round(c(ESAC_mse[h,y],inspect_mse[h,y], sbs_mse[h,y], subset_mse[h,y], dc_mse[h,y]),digits=1)
         minind = (res==min(res))
         
         for (t in 1:length(res)) {
@@ -615,8 +615,8 @@ if(save){
     }
   
   #printlines = c(printlines, "\\hline \\multicolumn{5}{c|}{Average MSE}")
-  #res = round(c(mean(hdcd_slow_det[,,2:kvals]),mean(hdcd_det[,,2:kvals]),mean(pilliat_det[,,2:kvals]),mean(inspect_det[,,2:kvals]), mean(sbs_det[,,2:kvals]), mean(subset_det[,,2:kvals]), mean(dc_det[,,2:kvals])),digits=3)
-  #res = round(c(mean(hdcd_mse),mean(inspect_mse), mean(sbs_mse), mean(subset_mse), mean(dc_mse)),digits=3)
+  #res = round(c(mean(ESAC_slow_det[,,2:kvals]),mean(ESAC_det[,,2:kvals]),mean(pilliat_det[,,2:kvals]),mean(inspect_det[,,2:kvals]), mean(sbs_det[,,2:kvals]), mean(subset_det[,,2:kvals]), mean(dc_det[,,2:kvals])),digits=3)
+  #res = round(c(mean(ESAC_mse),mean(inspect_mse), mean(sbs_mse), mean(subset_mse), mean(dc_mse)),digits=3)
   #minind = (res==min(res))
   #string =""
   #for (t in 1:length(res)) {

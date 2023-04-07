@@ -26,22 +26,22 @@ X = mus+noise
 rescale_variance = TRUE
 
 
-res1 = HDCD_test(X,droppartialsum = TRUE,fast=TRUE,rescale_variance = rescale_variance)
+res1 = ESAC_test(X,droppartialsum = TRUE,fast=TRUE,rescale_variance = rescale_variance)
 res1
 
-res2 = HDCD_test(X,droppartialsum = TRUE,fast=FALSE,rescale_variance = rescale_variance)
+res2 = ESAC_test(X,droppartialsum = TRUE,fast=FALSE,rescale_variance = rescale_variance)
 res2
 
 N = 1000
 tol = 1/N
-cc1 = HDCD_test_calibrate(n, p, N, tol, fast = TRUE, rescale_variance = rescale_variance )
-cc2 = HDCD_test_calibrate(n, p, N, tol, fast = FALSE, rescale_variance = rescale_variance )
+cc1 = ESAC_test_calibrate(n, p, N, tol, fast = TRUE, rescale_variance = rescale_variance )
+cc2 = ESAC_test_calibrate(n, p, N, tol, fast = FALSE, rescale_variance = rescale_variance )
 
 
-res3 = HDCD_test(X,droppartialsum = FALSE,fast=TRUE,rescale_variance = rescale_variance,
+res3 = ESAC_test(X,droppartialsum = FALSE,fast=TRUE,rescale_variance = rescale_variance,
                  thresholds = cc1[[2]])
 res3
-res4 = HDCD_test(X,droppartialsum = FALSE,fast=FALSE,rescale_variance = rescale_variance,
+res4 = ESAC_test(X,droppartialsum = FALSE,fast=FALSE,rescale_variance = rescale_variance,
                  thresholds = cc2[[2]])
 res4
 

@@ -2,8 +2,83 @@
 #' @useDynLib HDCD cPilliat_test_calibrate
 #' @useDynLib HDCD sort_test
 #' @useDynLib HDCD partialsum_test
+
+
+
+
+#' @title Pilliat single change-point test
+#' @description R wrapper function testing for a single change-point using the three test statistics in the multiple change point detection algorithm of \insertCite{pilliat_optimal_2022}{HDCD}. See also section (??) in REF TO ESAC.
+#' @param X Matrix of observations, where each row contains a time series
+#' @param empirical If \code{TRUE}, detection thresholds are based on Monte Carlo simulation
+#' @param threshold_d_const Leading constant for the analytical detection threshold for the dense statistic 
+#' @param threshold_partial_const Leading constant for the analytical detection threshold for the partial sum statistic 
+#' @param threshold_bj_const Leading constant for \eqn{p_0} when computing the detection threshold for the Berk-Jones statistic
+#' @param threshold_dense Manually specified value of detection threshold for the dense statistic
+#' @param thresholds_partial Vector of manually specified detection thresholds for the partial sum statistic, for sparsities/partial sums \eqn{t=1,2,4,\ldots,2^{\lfloor\log_2(p)\rfloor}}
+#' @param thresholds_bj Vector of manually specified detection thresholds for the Berk-Jones statistic, order corresponding to \eqn{x=1,2,\ldots,x_0}
+#' @param debug If \code{TRUE}, diagnostic prints are provided during execution
+#' @param tol If \code{empirical=TRUE}, \code{tol} is the false error probability tolerance
+#' @param N If \code{empirical=TRUE}, \code{N} is the number of Monte Carlo samples used
+#' @param rescale_variance If \code{TRUE}, each row of the data is re-scaled by a MAD estimate (see \code{\link{rescale_variance}})
+#' @param fast If \code{TRUE}, only the mid-point of \eqn{(0,\ldots,n]} is tested for a change-point. Otherwise a test is performed at each candidate change-point poisition
+#' @returns 1 if a change-point is detected, 0 otherwise
+#' @examples 
+#' library(HDCD)
+#' n = 200
+#' p = 200
+#' 
+#' # Generating data
+#' X = matrix(rnorm(n*p), ncol = n, nrow=p)
+#' Y = matrix(rnorm(n*p), ncol = n, nrow=p)
+#' 
+#' # Adding a single sparse change-point to X (and not Y):
+#' X[1:5, 100:200] = X[1:5, 100:200] +1
+#' 
+#' # Vanilla Pilliat test:
+#' resX = Pilliat_test(X)
+#' resX
+#' resY = Pilliat_test(Y)
+#' resY
+#' 
+#' # Manually setting leading constants for the theoretical thresholds for the three 
+#' # test statistics used
+#' resX = Pilliat_test(X, 
+#'                     threshold_d_const=4, 
+#'                     threshold_bj_const=6, 
+#'                     threshold_partial_const=4
+#' )
+#' resX 
+#' resY = Pilliat_test(Y, 
+#'                     threshold_d_const=4, 
+#'                     threshold_bj_const=6, 
+#'                     threshold_partial_const=4
+#' )
+#' resY
+#' 
+#' # Empirical choice of thresholds:
+#' resX = Pilliat_test(X, empirical = TRUE, N = 100, tol = 1/100)
+#' resX
+#' resY = Pilliat_test(Y, empirical = TRUE, N = 100, tol = 1/100)
+#' resY
+#' 
+#' # Manual empirical choice of thresholds (equivalent to the above)
+#' thresholds_test_emp = Pilliat_test_calibrate(n,p, N=100, tol=1/100,bonferroni=TRUE)
+#' resX = Pilliat_test(X, 
+#'                     threshold_dense=thresholds_test_emp$threshold_dense, 
+#'                     thresholds_bj = thresholds_test_emp$thresholds_bj, 
+#'                     thresholds_partial = thresholds_test_emp$thresholds_partial
+#' )
+#' resX
+#' resY = Pilliat_test(Y, 
+#'                     threshold_dense=thresholds_test_emp$threshold_dense, 
+#'                     thresholds_bj = thresholds_test_emp$thresholds_bj, 
+#'                     thresholds_partial = thresholds_test_emp$thresholds_partial
+#' )
+#' resY
+#' @references
+#' \insertAllCited{}
 #' @export
-changepoint_test_Pilliat = function(X, empirical =FALSE, N = 100, tol = 0.05,
+Pilliat_test = function(X, empirical =FALSE, N = 100, tol = 0.05,
                                     thresholds_partial=NULL, threshold_dense = NULL,
                                     thresholds_bj = NULL,
                                     threshold_d_const=4, threshold_bj_const=6, threshold_partial_const=4,
@@ -17,10 +92,8 @@ changepoint_test_Pilliat = function(X, empirical =FALSE, N = 100, tol = 0.05,
   xx = 1
   maxx = 1
   while(TRUE){
-    #p0 = threshold_bj_const/(pi^2*xx^2*n^2)
     logp0 = log(threshold_bj_const) - 2*log(pi) - 2*log(xx) - 2*log(n)
-    #qq = qbinom(1/n, p, p0,lower.tail=FALSE)
-    qq = qbinom(p = logp0, size = p, prob = exp(log(2) + pnorm(xx,lower.tail = FALSE,log = TRUE)),
+    qq = qbinom(p = logp0, size = p, prob = exp(log(2) + pnorm(xx,lower.tail = FALSE,log.p = TRUE)),
                 lower.tail=FALSE,log.p = TRUE)
 
     if(qq==0){
@@ -32,7 +105,7 @@ changepoint_test_Pilliat = function(X, empirical =FALSE, N = 100, tol = 0.05,
   
   if(empirical){
     if(is.null(thresholds_partial) || is.null(threshold_dense) || is.null(threshold_dense)){
-      res = changepoint_test_Pilliat_calibrate(n,p, N=N, tol=tol,threshold_bj_const=threshold_bj_const,debug=debug)
+      res = Pilliat_test_calibrate(n,p, N=N, tol=tol,threshold_bj_const=threshold_bj_const,debug=debug)
       thresholds_partial = res$thresholds_partial
       thresholds_bj = res$thresholds_bj
       threshold_dense = res$threshold_dense
@@ -61,15 +134,12 @@ changepoint_test_Pilliat = function(X, empirical =FALSE, N = 100, tol = 0.05,
     xx = 1
     maxx = 1
     while(TRUE){
-      #p0 = threshold_bj_const/(pi^2*xx^2*n^2)
       logp0 = log(threshold_bj_const) - 2*log(pi) - 2*log(xx) - 2*log(n)
-      #qq = qbinom(1/n, p, p0,lower.tail=FALSE)
-      qq = qbinom(p = logp0, size = p, prob = exp(log(2) + pnorm(xx,lower.tail = FALSE,log = TRUE)),
+      qq = qbinom(p = logp0, size = p, prob = exp(log(2) + pnorm(xx,lower.tail = FALSE,log.p = TRUE)),
                   lower.tail=FALSE,log.p = TRUE)
       if(debug){
         print(xx)
-        print(p0)
-        print(exp(log(2) + pnorm(xx,lower.tail = FALSE,log = TRUE)))
+        print(exp(log(2) + pnorm(xx,lower.tail = FALSE,log.p = TRUE)))
         print(qq)
       }
       if(qq==0){
@@ -87,14 +157,7 @@ changepoint_test_Pilliat = function(X, empirical =FALSE, N = 100, tol = 0.05,
     print(thresholds_bj)
   }
   
-  
-  #res = .Call(cPilliat, X,as.integer(n), as.integer(p), thresholds,thresholds_test,
-  #           as.integer(lens),as.integer(length(lens)), as.integer(K), as,nu_as, 
-  #          as.integer(length(as)), as.integer(twologn), as.integer(ts),as.integer(debug))
-  #res = .Call(cPilliat, X, as.integer(n), as.integer(p), as.numeric(thresholds_partial), 
-  #            as.numeric(threshold_dense), as.integer( thresholds_bj),
-  #            as.integer(lens), as.integer(length(lens)), as.integer(K), as.integer(maxx),as.integer(debug))
-  
+
   res = .Call(cPilliat_test, as.numeric(X),as.integer(n),as.integer(p),
               as.numeric(thresholds_partial), as.numeric(threshold_dense), 
               as.integer(thresholds_bj),as.integer(maxx), as.integer(rescale_variance),
@@ -104,26 +167,75 @@ changepoint_test_Pilliat = function(X, empirical =FALSE, N = 100, tol = 0.05,
 }
 
 
-
+#' @title Generates detection thresholds for the Pilliat algorithm for testing for a single change-point using Monte Carlo simulation
+#' @description R wrapper for function choosing detection thresholds for the Dense, Partial sum and Berk-Jones statistics in the multiple change-point detection algorithm of \insertCite{pilliat_optimal_2022}{HDCD} for single change-point testing using Monte Carlo simulation. When \code{Bonferroni==TRUE}, the detection thresholds are chosen by simulating the leading constant in the theoretical detection thresholds given in \insertCite{pilliat_optimal_2022}{HDCD}, similarly as described in section ?? in REF for ESAC. When \code{Bonferroni==TRUE}, the thresholds for the Berk-Jones statistic are theoretical and not chosen by Monte Carlo simulation.
+#' @param n Number of observations
+#' @param p Number time series
+#' @param bonferroni If \code{TRUE}, a Bonferroni correction applied and the detection thresholds for each statistic is chosen by simulating the leading constant in the theoretical detection thresholds
+#' @param threshold_bj_const Leading constant for \eqn{p_0} for the Berk-Jones statistic
+#' @param debug If \code{TRUE}, diagnostic prints are provided during execution
+#' @param tol False error probability tolerance
+#' @param N Number of Monte Carlo samples used
+#' @param rescale_variance If \code{TRUE}, each row of the data is rescaled by a MAD estimate
+#' @param fast If \code{FALSE}, a change-point test is applied to each candidate change-point position in each interval. If FALSE, only the mid-point of each interval is considered
+#' @return A list containing 
+#'   \item{thresholds_partial}{vector of thresholds for the Partial Sum statistic (respectively for \eqn{t=1,2,4,\ldots,2^{\lfloor\log_2(p)\rfloor}} number of terms in the partial sum)}
+#'   \item{threshold_dense}{threshold for the dense statistic}
+#'   \item{thresholds_bj}{vector of thresholds for the Berk-Jones static (respectively for \eqn{x=1,2,\ldots,x_0})}
+#' @examples 
+#' library(HDCD)
+#' n = 50
+#' p = 50
+#' 
+#' set.seed(100)
+#' thresholds_test_emp = Pilliat_test_calibrate(n,p, bonferroni=TRUE,N=100, tol=1/100)
+#' set.seed(100)
+#' thresholds_test_emp_without_bonferroni = Pilliat_test_calibrate(n,p, 
+#'                                          bonferroni=FALSE,N=100, tol=1/100)
+#' thresholds_test_emp # thresholds with bonferroni correction
+#' thresholds_test_emp_without_bonferroni # thresholds without bonferroni correction
+#' 
+#' # Generating data
+#' X = matrix(rnorm(n*p), ncol = n, nrow=p)
+#' Y = matrix(rnorm(n*p), ncol = n, nrow=p)
+#' 
+#' # Adding a single sparse change-point to X (and not Y):
+#' X[1:5, 25:50] = X[1:5, 25:50] +2
+#' resX = Pilliat_test(X, 
+#'                     threshold_dense=thresholds_test_emp$threshold_dense, 
+#'                     thresholds_bj = thresholds_test_emp$thresholds_bj, 
+#'                     thresholds_partial = thresholds_test_emp$thresholds_partial
+#' )
+#' resX
+#' resY = Pilliat_test(Y, 
+#'                     threshold_dense=thresholds_test_emp$threshold_dense, 
+#'                     thresholds_bj = thresholds_test_emp$thresholds_bj, 
+#'                     thresholds_partial = thresholds_test_emp$thresholds_partial
+#' )
+#' resY
 #' @export
-changepoint_test_Pilliat_calibrate = function(n,p, N=100, tol=0.05,threshold_bj_const=6,
+Pilliat_test_calibrate = function(n,p, N=100, tol=1/100,threshold_bj_const=6, bonferroni=TRUE,
                                               rescale_variance = TRUE,fast = FALSE,debug=FALSE){
 
   log2p = floor(log(p,base=2))+1
-  
+  if(bonferroni){
+    tol = tol/3
+    N = N*3
+  }
+  thresholds_bj = c()
   xx = 1
   maxx = 1
+  delta = tol 
+  
   while(TRUE){
-    #p0 = threshold_bj_const/(pi^2*xx^2*n^2)
-    logp0 = log(threshold_bj_const) - 2*log(pi) - 2*log(xx) - 2*log(n)
-    #qq = qbinom(1/n, p, p0,lower.tail=FALSE)
-    qq = qbinom(p = logp0, size = p, prob = exp(log(2) + pnorm(xx,lower.tail = FALSE,log = TRUE)),
+    logp0 = log(6*delta) - 2*log(pi) - 2*log(xx) - 2*log(n)
+    qq = qbinom(p = logp0, size = p, prob = exp(log(2) + pnorm(xx,lower.tail = FALSE,log.p = TRUE)),
                 lower.tail=FALSE,log.p = TRUE)
-    
     if(qq==0){
       maxx = xx-1
       break
     }
+    thresholds_bj = c(thresholds_bj,qq)
     xx = xx+1
   }
   
@@ -133,8 +245,13 @@ changepoint_test_Pilliat_calibrate = function(n,p, N=100, tol=0.05,threshold_bj_
   res= .Call(cPilliat_test_calibrate, as.integer(n), as.integer(p), as.integer(N), 
              as.integer(toln), as.integer(maxx), as.integer(log2p),as.integer(rescale_variance),
              as.integer(fast),as.integer(debug))
-  #res[["as"]] = as
-  #res[["nu_as"]] = nu_as
+  
+  if(bonferroni){
+    pilliatthreshinfo = Pilliat_thresholds(n,p,tol)
+    
+    res$thresholds_bj = ceiling(max(res$thresholds_bj / thresholds_bj) * thresholds_bj)
+    res$thresholds_partial = max(res$thresholds_partial / pilliatthreshinfo$thresholds_partial) * pilliatthreshinfo$thresholds_partial
+  }
   return(res)
 }
 
