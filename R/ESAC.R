@@ -5,6 +5,7 @@
 #' @importFrom Rdpack reprompt
 #' @import stats
 
+
 #' @title Efficient Sparsity Adaptive Change-point estimator
 #' @description R wrapper for C function implementing the full ESAC algorithm (see REF). 
 #' @param X Matrix of observations, where each row contains a time series
