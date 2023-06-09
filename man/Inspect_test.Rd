@@ -42,7 +42,7 @@ Inspect_test(
 1 if a change-point is detected, 0 otherwise
 }
 \description{
-R wrapper for C function testing for a single change-point using Inspect \insertCite{wang_high_2018}{HDCD}
+R wrapper for C function testing for a single change-point using Inspect \insertCite{wang_high_2018;textual}{HDCD}.
 }
 \examples{
 library(HDCD)

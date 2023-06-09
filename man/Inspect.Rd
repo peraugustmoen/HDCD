@@ -53,7 +53,7 @@ A list containing
   \item{scales}{vector of estimated noise level for each series}
 }
 \description{
-R wrapper for C function implementing a Narrowest-Over-Threshold variant of Inspect \insertCite{wang_high_2018}{HDCD} as specified in REF. Note that the algorithm is only implemented for \eqn{\mathcal{S} = \mathcal{S}_2}, in the notation of REF.
+R wrapper for C function implementing a Narrowest-Over-Threshold variant of Inspect \insertCite{wang_high_2018;textual}{HDCD} as specified in Appendix C in \insertCite{moen2023efficient;textual}{HDCD}. Note that the algorithm is only implemented for \eqn{\mathcal{S} = \mathcal{S}_2}, in the notation of \insertCite{moen2023efficient;textual}{HDCD}.
 }
 \examples{
 library(HDCD)

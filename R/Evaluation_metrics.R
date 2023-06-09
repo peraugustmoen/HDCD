@@ -52,7 +52,7 @@ hausdorff = function(v1, v2,n){
 
 
 #' @title ARI
-#' @description Computes the Adjusted Rand Index (ARI) of a vector of estimated change-points 
+#' @description Computes the Adjusted Rand Index (ARI) of a vector of estimated change-points.
 #' @param etas Vector of true change-points
 #' @param eta_hats Vector of estimated change-points
 #' @param n Sample size 

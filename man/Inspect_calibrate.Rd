@@ -46,7 +46,7 @@ A list containing
    \item{max_value}{the empirical threshold}
 }
 \description{
-R wrapper for C function choosing empirical detection threshold \eqn{\xi} for the Narrowest-Over-Threshold variant of Inspect (as specified in REF) using Monte Carlo simulation
+R wrapper for C function choosing empirical detection threshold \eqn{\xi} for the Narrowest-Over-Threshold variant of Inspect \insertCite{@as specified in section 4.2 in @moen2023efficient}{HDCD} using Monte Carlo simulation.
 }
 \examples{
 library(HDCD)

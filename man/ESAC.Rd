@@ -75,7 +75,7 @@ A list containing
   \item{thresholds_test}{vector of values of \eqn{\gamma(t)} for \eqn{t \in \mathcal{T}} in decreasing order}
 }
 \description{
-R wrapper for C function implementing the full ESAC algorithm (see REF).
+R wrapper for C function implementing the full ESAC algorithm \insertCite{@see @moen2023efficient}{HDCD}.
 }
 \examples{
 library(HDCD)

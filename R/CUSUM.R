@@ -3,8 +3,8 @@
 
 
 
-#' @title CUSUM transformation of matrix
-#' @description R wrapper for C function computing the CUSUM transformation of matrix over an interval \eqn{(s,e]} as in REF. For compatibility with C indexing, the user should subtract \eqn{1} from both \eqn{s} and \eqn{e} when supplying the arguments to the function. If start and stop are not supplied, the CUSUM is computed over the full data, so \eqn{(s,e] = (0,n]}. In this case, \code{CUSUM} returns the same result as \code{cusum.transform} in the package \code{InspectChangepoint} \insertCite{inspectpackage}{HDCD}. 
+#' @title CUSUM transformation of a matrix
+#' @description R wrapper for C function computing the CUSUM transformation of a matrix over an interval \eqn{(s,e]}. For compatibility with C indexing, the user should subtract \eqn{1} from both \eqn{s} and \eqn{e} when supplying the arguments to the function. If start and stop are not supplied, the CUSUM is computed over the full data, so \eqn{(s,e] = (0,n]}. In this case, \code{CUSUM} returns the same result as \code{cusum.transform} in the package \code{InspectChangepoint} \insertCite{inspectpackage}{HDCD}. 
 #' @param X Matrix of observations, where each row contains a time series
 #' @param start Starting point of interval over which the CUSUM should be computed, subtracted by one
 #' @param stop Ending point of interval over which the CUSUM should be computed, subtracted by one
@@ -45,7 +45,7 @@ CUSUM = function(X, start=NULL, stop=NULL){
 
 
 #' @title CUSUM transformation of matrix at a specific position
-#' @description R wrapper for C function computing the CUSUM transformation of matrix over an interval \eqn{(s,e]} evaluated at a specific position, as in REF. For compatibility with C indexing, the user should subtract \eqn{1} from \eqn{s}, \eqn{e} and \eqn{v} when supplying the arguments to the function. If start and stop are not supplied, the CUSUM is computed over the full data, so \eqn{(s,e] = (0,n]}. 
+#' @description R wrapper for C function computing the CUSUM transformation of matrix over an interval \eqn{(s,e]} evaluated at a specific position. For compatibility with C indexing, the user should subtract \eqn{1} from \eqn{s}, \eqn{e} and \eqn{v} when supplying the arguments to the function. If start and stop are not supplied, the CUSUM is computed over the full data, so \eqn{(s,e] = (0,n]}. 
 #' @param X Matrix of observations, where each row contains a time series
 #' @param start Starting point of interval over which the CUSUM should be computed, subtracted by one
 #' @param stop Ending point of interval over which the CUSUM should be computed, subtracted by one

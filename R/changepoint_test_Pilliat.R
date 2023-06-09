@@ -7,7 +7,7 @@
 
 
 #' @title Pilliat single change-point test
-#' @description R wrapper function testing for a single change-point using the three test statistics in the multiple change point detection algorithm of \insertCite{pilliat_optimal_2022}{HDCD}. See also section (??) in REF TO ESAC.
+#' @description R wrapper function testing for a single change-point using the three test statistics in the multiple change point detection algorithm of \insertCite{pilliat_optimal_2022;textual}{HDCD}. See also Appendix E in \insertCite{moen2023efficient;textual}{HDCD}.
 #' @param X Matrix of observations, where each row contains a time series
 #' @param empirical If \code{TRUE}, detection thresholds are based on Monte Carlo simulation
 #' @param threshold_d_const Leading constant for the analytical detection threshold for the dense statistic 
@@ -168,7 +168,7 @@ Pilliat_test = function(X, empirical =FALSE, N = 100, tol = 0.05,
 
 
 #' @title Generates detection thresholds for the Pilliat algorithm for testing for a single change-point using Monte Carlo simulation
-#' @description R wrapper for function choosing detection thresholds for the Dense, Partial sum and Berk-Jones statistics in the multiple change-point detection algorithm of \insertCite{pilliat_optimal_2022}{HDCD} for single change-point testing using Monte Carlo simulation. When \code{Bonferroni==TRUE}, the detection thresholds are chosen by simulating the leading constant in the theoretical detection thresholds given in \insertCite{pilliat_optimal_2022}{HDCD}, similarly as described in section ?? in REF for ESAC. When \code{Bonferroni==TRUE}, the thresholds for the Berk-Jones statistic are theoretical and not chosen by Monte Carlo simulation.
+#' @description R wrapper for function choosing detection thresholds for the Dense, Partial sum and Berk-Jones statistics in the multiple change-point detection algorithm of \insertCite{pilliat_optimal_2022;textual}{HDCD} for single change-point testing using Monte Carlo simulation. When \code{Bonferroni==TRUE}, the detection thresholds are chosen by simulating the leading constant in the theoretical detection thresholds given in \insertCite{pilliat_optimal_2022;textual}{HDCD}, similarly as described in Appendix B in \insertCite{moen2023efficient;textual}{HDCD} for ESAC. When \code{Bonferroni==TRUE}, the thresholds for the Berk-Jones statistic are theoretical and not chosen by Monte Carlo simulation.
 #' @param n Number of observations
 #' @param p Number time series
 #' @param bonferroni If \code{TRUE}, a Bonferroni correction applied and the detection thresholds for each statistic is chosen by simulating the leading constant in the theoretical detection thresholds

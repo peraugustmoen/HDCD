@@ -40,7 +40,7 @@ A list containing
    \item{max_value}{the empirical threshold}
 }
 \description{
-R wrapper for C function choosing the empirical detection threshold \eqn{\xi} for Inspect \insertCite{wang_high_2018}{HDCD} for single change-point testing using Monte Carlo simulation
+R wrapper for C function choosing the empirical detection threshold \eqn{\xi} for Inspect \insertCite{wang_high_2018;textual}{HDCD} for single change-point testing using Monte Carlo simulation.
 }
 \examples{
 library(HDCD)

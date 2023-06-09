@@ -30,7 +30,7 @@ single_SBS_calibrate(
 Threshold
 }
 \description{
-R wrapper for function choosing empirical threshold \eqn{\pi_T} using Monte Carlo simulation for single change-point Sparsified Binary Segmentation. More specifically, the function returns the empirical upper tol quantile of CUSUMs over \eqn{p} time series, each of length \eqn{n}, based on \eqn{N} number of runs
+R wrapper for function choosing empirical threshold \eqn{\pi_T} using Monte Carlo simulation for single change-point Sparsified Binary Segmentation. More specifically, the function returns the empirical upper tol quantile of CUSUMs over \eqn{p} time series, each of length \eqn{n}, based on \eqn{N} number of runs.
 }
 \examples{
 library(HDCD)

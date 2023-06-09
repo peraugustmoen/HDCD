@@ -35,7 +35,7 @@ A list containing
   \item{maxval}{maximum thresholded and aggregated CUSUM at the estimated change-point position}
 }
 \description{
-R wrapper for C function for single change-point estimation using Sparsified Binary Segmentation \insertCite{cho_multiple-change-point_2015;textual}{HDCD}
+R wrapper for C function for single change-point estimation using Sparsified Binary Segmentation \insertCite{cho_multiple-change-point_2015;textual}{HDCD}.
 }
 \examples{
 # Single SBS

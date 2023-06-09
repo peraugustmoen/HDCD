@@ -3,7 +3,7 @@
 
 
 #' @title Inspect for single change-point estimation
-#' @description R wrapper for C function for single change-point estimation using Inspect \insertCite{wang_high_2018}{HDCD}. Note that the algorithm is only implemented for \eqn{\mathcal{S} = \mathcal{S}_2}, in the notation of \insertCite{wang_high_2018;textual}{HDCD}
+#' @description R wrapper for C function for single change-point estimation using Inspect \insertCite{wang_high_2018}{HDCD}. Note that the algorithm is only implemented for \eqn{\mathcal{S} = \mathcal{S}_2}, in the notation of \insertCite{wang_high_2018;textual}{HDCD}.
 #' @param X Matrix of observations, where each row contains a time series
 #' @param lambda Manually specified value of \eqn{\lambda} (can be \code{NULL}, in which case \eqn{\lambda \gets \sqrt{\log(p\log n)/2}})
 #' @param rescale_variance If \code{TRUE}, each row of the data is re-scaled by a MAD estimate using \code{\link{rescale_variance}}

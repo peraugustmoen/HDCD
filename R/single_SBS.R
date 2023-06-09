@@ -6,7 +6,7 @@
 
 
 #' @title Sparsified Binary Segmentation for single change-point estimation
-#' @description R wrapper for C function for single change-point estimation using Sparsified Binary Segmentation \insertCite{cho_multiple-change-point_2015;textual}{HDCD}
+#' @description R wrapper for C function for single change-point estimation using Sparsified Binary Segmentation \insertCite{cho_multiple-change-point_2015;textual}{HDCD}.
 #' @param X Matrix of observations, where each row contains a time series
 #' @param threshold Manually specified value of the threshold \eqn{\pi_T}
 #' @param empirical If \code{TRUE}, the threshold is based on Monte Carlo simulation
@@ -64,7 +64,7 @@ single_SBS = function(X, threshold=NULL, rescale_variance = TRUE,empirical =FALS
 
 
 #' @title Generates threshold \eqn{\pi_T} for Sparsified Binary Segmentation for single change-point detection
-#' @description R wrapper for function choosing empirical threshold \eqn{\pi_T} using Monte Carlo simulation for single change-point Sparsified Binary Segmentation. More specifically, the function returns the empirical upper tol quantile of CUSUMs over \eqn{p} time series, each of length \eqn{n}, based on \eqn{N} number of runs 
+#' @description R wrapper for function choosing empirical threshold \eqn{\pi_T} using Monte Carlo simulation for single change-point Sparsified Binary Segmentation. More specifically, the function returns the empirical upper tol quantile of CUSUMs over \eqn{p} time series, each of length \eqn{n}, based on \eqn{N} number of runs.
 #' @param n Number of observations
 #' @param p Number time series
 #' @param tol False positive probability tolerance

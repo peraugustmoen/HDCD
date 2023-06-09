@@ -8,7 +8,7 @@
 
 
 #' @title Informative sparse projection for estimating change-points (Inspect)
-#' @description R wrapper for C function implementing a Narrowest-Over-Threshold variant of Inspect \insertCite{wang_high_2018}{HDCD} as specified in REF. Note that the algorithm is only implemented for \eqn{\mathcal{S} = \mathcal{S}_2}, in the notation of REF.
+#' @description R wrapper for C function implementing a Narrowest-Over-Threshold variant of Inspect \insertCite{wang_high_2018;textual}{HDCD} as specified in Appendix C in \insertCite{moen2023efficient;textual}{HDCD}. Note that the algorithm is only implemented for \eqn{\mathcal{S} = \mathcal{S}_2}, in the notation of \insertCite{moen2023efficient;textual}{HDCD}.
 #' @param X Matrix of observations, where each row contains a time series
 #' @param alpha Parameter for generating seeded intervals
 #' @param K Parameter for generating seeded intervals
@@ -117,7 +117,7 @@ Inspect = function(X, lambda = NULL , xi = NULL , alpha = 1.5, K = 5,eps=1e-10,
 
 
 #' @title Generates empirical detection threshold \eqn{\xi} using Monte Carlo simulation
-#' @description R wrapper for C function choosing empirical detection threshold \eqn{\xi} for the Narrowest-Over-Threshold variant of Inspect (as specified in REF) using Monte Carlo simulation
+#' @description R wrapper for C function choosing empirical detection threshold \eqn{\xi} for the Narrowest-Over-Threshold variant of Inspect \insertCite{@as specified in section 4.2 in @moen2023efficient}{HDCD} using Monte Carlo simulation.
 #' @param n Number of observations
 #' @param p Number time series
 #' @param alpha Parameter for generating seeded intervals
@@ -181,7 +181,7 @@ Inspect_calibrate = function(n, p, N=100, tol=1/100,lambda = NULL , alpha = 1.5,
 
 
 #' @title Inspect single change-point test
-#' @description R wrapper for C function testing for a single change-point using Inspect \insertCite{wang_high_2018}{HDCD}
+#' @description R wrapper for C function testing for a single change-point using Inspect \insertCite{wang_high_2018;textual}{HDCD}.
 #' @param X Matrix of observations, where each row contains a time series
 #' @param empirical If \code{TRUE}, the detection threshold \eqn{xi} is based on Monte Carlo simulation using \code{\link{Inspect_test_calibrate}}
 #' @param lambda Manually specified value of \eqn{\lambda} (can be \code{NULL}, in which case \eqn{\lambda \gets \sqrt{\log(p\log n)/2}})
@@ -271,7 +271,7 @@ Inspect_test = function(X, lambda = NULL , xi = NULL, eps=1e-10, empirical=FALSE
 
 
 #' @title Generates empirical detection threshold \eqn{\xi} for single change-point testing using Monte Carlo simulation
-#' @description R wrapper for C function choosing the empirical detection threshold \eqn{\xi} for Inspect \insertCite{wang_high_2018}{HDCD} for single change-point testing using Monte Carlo simulation
+#' @description R wrapper for C function choosing the empirical detection threshold \eqn{\xi} for Inspect \insertCite{wang_high_2018;textual}{HDCD} for single change-point testing using Monte Carlo simulation.
 #' @param n Number of observations
 #' @param p Number time series
 #' @param tol False positive probability tolerance

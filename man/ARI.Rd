@@ -17,7 +17,7 @@ ARI(etas, eta_hats, n)
 The ARI
 }
 \description{
-Computes the Adjusted Rand Index (ARI) of a vector of estimated change-points
+Computes the Adjusted Rand Index (ARI) of a vector of estimated change-points.
 }
 \examples{
 library(HDCD)

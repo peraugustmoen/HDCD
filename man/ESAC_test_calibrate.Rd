@@ -42,7 +42,7 @@ A list containing
   \item{nu_as}{vector of conditional expectations \eqn{\nu_{a(t)}} of a thresholded Gaussian, for \eqn{t \in \mathcal{T}} decreasing in \eqn{t}}
 }
 \description{
-R wrapper for C function choosing the penalty function \eqn{\gamma(t)} by Monte Carlo simulation, as described in REF, for testing for a single change-point
+R wrapper for C function choosing the penalty function \eqn{\gamma(t)} by Monte Carlo simulation, as described in Appendix B in \insertCite{moen2023efficient;textual}{HDCD}, for testing for a single change-point.
 }
 \examples{
 library(HDCD)

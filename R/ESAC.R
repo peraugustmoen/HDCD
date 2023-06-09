@@ -7,7 +7,7 @@
 
 
 #' @title Efficient Sparsity Adaptive Change-point estimator
-#' @description R wrapper for C function implementing the full ESAC algorithm (see REF). 
+#' @description R wrapper for C function implementing the full ESAC algorithm \insertCite{@see @moen2023efficient}{HDCD}. 
 #' @param X Matrix of observations, where each row contains a time series
 #' @param alpha Parameter for generating seeded intervals
 #' @param K Parameter for generating seeded intervals
@@ -187,7 +187,7 @@ ESAC = function(X, threshold_d=1.5, threshold_s=1.0, alpha = 1.5, K = 5, debug =
 
 
 #' @title ESAC single change-point test
-#' @description R wrapper for C function testing for a single change-point using ESAC (see REF)
+#' @description R wrapper for C function testing for a single change-point using ESAC \insertCite{@see @moen2023efficient}{HDCD}.
 #' @param X Matrix of observations, where each row contains a time series
 #' @param empirical If \code{TRUE}, detection thresholds are based on Monte Carlo simulation using \code{\link{ESAC_test_calibrate}}
 #' @param threshold_d Leading constant for \eqn{\gamma(t) \propto r(t)} for \eqn{t=p}.  Only relevant when \code{empirical=FALSE} and \code{thresholds=NULL}
@@ -307,7 +307,7 @@ ESAC_test = function(X, threshold_d=1.5, threshold_s=1.0,debug =FALSE,
 }
 
 #' @title Generates empirical penalty function \eqn{\gamma(t)} for single change-point testing using Monte Carlo simulation
-#' @description R wrapper for C function choosing the penalty function \eqn{\gamma(t)} by Monte Carlo simulation, as described in REF, for testing for a single change-point
+#' @description R wrapper for C function choosing the penalty function \eqn{\gamma(t)} by Monte Carlo simulation, as described in Appendix B in \insertCite{moen2023efficient;textual}{HDCD}, for testing for a single change-point.
 #' @param n Number of observations
 #' @param p Number time series
 #' @param bonferroni If \code{TRUE}, a Bonferroni correction applied and the empirical penalty function \eqn{\gamma(t)} is chosen by simulating leading constants of \eqn{r(t)} through Monte Carlo simulation.
@@ -409,7 +409,7 @@ ESAC_test_calibrate = function(n, p, bonferroni=TRUE, N=1000, tol=1/1000, fast =
 
 
 #' @title Generates empirical penalty function \eqn{\gamma(t)} for the ESAC algorithm using Monte Carlo simulation
-#' @description R wrapper for C function choosing the penalty function \eqn{\gamma(t)} by Monte Carlo simulation, as described in REF
+#' @description R wrapper for C function choosing the penalty function \eqn{\gamma(t)} by Monte Carlo simulation, as described in Appendix B in \insertCite{moen2023efficient;textual}{HDCD}.
 #' @param n Number of observations
 #' @param p Number time series
 #' @param alpha Parameter for generating seeded intervals

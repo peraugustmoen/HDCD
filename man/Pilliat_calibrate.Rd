@@ -48,7 +48,7 @@ A list containing
   \item{thresholds_bj}{vector of thresholds for the Berk-Jones static (respectively for \eqn{x=1,2,\ldots,x_0})}
 }
 \description{
-R wrapper for function choosing detection thresholds for the Dense, Partial sum and Berk-Jones statistics in the multiple change-point detection algorithm of \insertCite{pilliat_optimal_2022;textual}{HDCD} using Monte Carlo simulation. When \code{Bonferroni==TRUE}, the detection thresholds are chosen by simulating the leading constant in the theoretical detection thresholds given in \insertCite{pilliat_optimal_2022;textual}{HDCD}, similarly as described in section ?? in REF for ESAC. When \code{Bonferroni==TRUE}, the thresholds for the Berk-Jones statistic are theoretical and not chosen by Monte Carlo simulation.
+R wrapper for function choosing detection thresholds for the Dense, Partial sum and Berk-Jones statistics in the multiple change-point detection algorithm of \insertCite{pilliat_optimal_2022;textual}{HDCD} using Monte Carlo simulation. When \code{Bonferroni==TRUE}, the detection thresholds are chosen by simulating the leading constant in the theoretical detection thresholds given in \insertCite{pilliat_optimal_2022;textual}{HDCD}, similarly as described in Appendix B in \insertCite{moen2023efficient;textual}{HDCD} for ESAC. When \code{Bonferroni==TRUE}, the thresholds for the Berk-Jones statistic are theoretical and not chosen by Monte Carlo simulation.
 }
 \examples{
 library(HDCD)

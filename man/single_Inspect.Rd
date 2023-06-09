@@ -32,7 +32,7 @@ A list containing
   \item{CUSUMval}{projected CUSUM value at the estimated change-point position}
 }
 \description{
-R wrapper for C function for single change-point estimation using Inspect \insertCite{wang_high_2018}{HDCD}. Note that the algorithm is only implemented for \eqn{\mathcal{S} = \mathcal{S}_2}, in the notation of \insertCite{wang_high_2018;textual}{HDCD}
+R wrapper for C function for single change-point estimation using Inspect \insertCite{wang_high_2018}{HDCD}. Note that the algorithm is only implemented for \eqn{\mathcal{S} = \mathcal{S}_2}, in the notation of \insertCite{wang_high_2018;textual}{HDCD}.
 }
 \examples{
 library(HDCD)

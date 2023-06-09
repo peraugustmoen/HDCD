@@ -3,7 +3,7 @@
 
 
 #' @title Efficient Sparsity Adaptive Change-point estimator for a single change-point
-#' @description R wrapper for C function implementing ESAC for single change-point estimation
+#' @description R wrapper for C function implementing ESAC for single change-point estimation, as described in section 3.1 in \insertCite{moen2023efficient;textual}{HDCD}
 #' @param X Matrix of observations, where each row contains a time series
 #' @param threshold_d Leading constant for \eqn{\lambda(t) \propto r(t)} for \eqn{t= p}
 #' @param threshold_s Leading constant for \eqn{\lambda(t) \propto r(t)} for \eqn{t\leq \sqrt{p\log n}}. 

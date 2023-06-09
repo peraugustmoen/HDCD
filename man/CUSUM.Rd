@@ -2,7 +2,7 @@
 % Please edit documentation in R/CUSUM.R
 \name{CUSUM}
 \alias{CUSUM}
-\title{CUSUM transformation of matrix}
+\title{CUSUM transformation of a matrix}
 \usage{
 CUSUM(X, start = NULL, stop = NULL)
 }
@@ -19,7 +19,7 @@ A matrix of CUSUM values. The \eqn{(i,j)}-th element corresponds to the CUSUM tr
 where \eqn{s = (\code{start}+1)}, \eqn{e = (\code{stop}+1)} and \eqn{v = \code{start}+1+j}.
 }
 \description{
-R wrapper for C function computing the CUSUM transformation of matrix over an interval \eqn{(s,e]} as in REF. For compatibility with C indexing, the user should subtract \eqn{1} from both \eqn{s} and \eqn{e} when supplying the arguments to the function. If start and stop are not supplied, the CUSUM is computed over the full data, so \eqn{(s,e] = (0,n]}. In this case, \code{CUSUM} returns the same result as \code{cusum.transform} in the package \code{InspectChangepoint} \insertCite{inspectpackage}{HDCD}.
+R wrapper for C function computing the CUSUM transformation of a matrix over an interval \eqn{(s,e]}. For compatibility with C indexing, the user should subtract \eqn{1} from both \eqn{s} and \eqn{e} when supplying the arguments to the function. If start and stop are not supplied, the CUSUM is computed over the full data, so \eqn{(s,e] = (0,n]}. In this case, \code{CUSUM} returns the same result as \code{cusum.transform} in the package \code{InspectChangepoint} \insertCite{inspectpackage}{HDCD}.
 }
 \examples{
 n = 10

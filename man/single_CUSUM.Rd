@@ -21,7 +21,7 @@ A vector of CUSUM values, each corresponding to a row of the input matrix. The \
 where \eqn{s = (\code{start}+1)}, \eqn{e = (\code{stop}+1)} and \eqn{v = \code{pos}+1}.
 }
 \description{
-R wrapper for C function computing the CUSUM transformation of matrix over an interval \eqn{(s,e]} evaluated at a specific position, as in REF. For compatibility with C indexing, the user should subtract \eqn{1} from \eqn{s}, \eqn{e} and \eqn{v} when supplying the arguments to the function. If start and stop are not supplied, the CUSUM is computed over the full data, so \eqn{(s,e] = (0,n]}.
+R wrapper for C function computing the CUSUM transformation of matrix over an interval \eqn{(s,e]} evaluated at a specific position. For compatibility with C indexing, the user should subtract \eqn{1} from \eqn{s}, \eqn{e} and \eqn{v} when supplying the arguments to the function. If start and stop are not supplied, the CUSUM is computed over the full data, so \eqn{(s,e] = (0,n]}.
 }
 \examples{
 n = 10

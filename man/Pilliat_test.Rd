@@ -51,7 +51,7 @@ Pilliat_test(
 1 if a change-point is detected, 0 otherwise
 }
 \description{
-R wrapper function testing for a single change-point using the three test statistics in the multiple change point detection algorithm of \insertCite{pilliat_optimal_2022}{HDCD}. See also section (??) in REF TO ESAC.
+R wrapper function testing for a single change-point using the three test statistics in the multiple change point detection algorithm of \insertCite{pilliat_optimal_2022;textual}{HDCD}. See also Appendix E in \insertCite{moen2023efficient;textual}{HDCD}.
 }
 \examples{
 library(HDCD)

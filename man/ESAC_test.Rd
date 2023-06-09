@@ -42,7 +42,7 @@ ESAC_test(
 1 if a change-point is detected, 0 otherwise
 }
 \description{
-R wrapper for C function testing for a single change-point using ESAC (see REF)
+R wrapper for C function testing for a single change-point using ESAC \insertCite{@see @moen2023efficient}{HDCD}.
 }
 \examples{
 library(HDCD)

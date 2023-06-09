@@ -29,7 +29,7 @@ A list containing
   \item{s}{the value of \eqn{t \in \mathcal{T}} at which the sparsity specific score is maximized}
 }
 \description{
-R wrapper for C function implementing ESAC for single change-point estimation
+R wrapper for C function implementing ESAC for single change-point estimation, as described in section 3.1 in \insertCite{moen2023efficient;textual}{HDCD}
 }
 \examples{
 library(HDCD)
