@@ -418,6 +418,8 @@ ESAC_test_calibrate = function(n, p, bonferroni=TRUE, N=1000, tol=1/1000, fast =
 #' @param debug If \code{TRUE}, diagnostic prints are provided during execution
 #' @param tol False error probability tolerance
 #' @param N Number of Monte Carlo samples used
+#' @param tdf If NULL, samples are drawn from a Gaussian distribution. Otherwise, they are drawn from a \eqn{t}
+#' distribution with \code{tdf} degrees of freedom.
 #' @param rescale_variance If \code{TRUE}, each row of the data is re-scaled by a MAD estimate using \code{\link{rescale_variance}}
 #' @param fast If \code{TRUE}, ESAC only tests for a change-point at the midpoint of each seeded interval
 #' @return A list containing 
@@ -448,7 +450,7 @@ ESAC_test_calibrate = function(n, p, bonferroni=TRUE, N=1000, tol=1/1000, fast =
 #' \insertAllCited{}
 #' @export
 ESAC_calibrate = function(n,p, alpha = 1.5, K = 5, N=1000, tol=0.001, bonferroni = TRUE, fast = FALSE,rescale_variance = TRUE,
-                          debug=FALSE){
+                          tdf = NULL,debug=FALSE){
   lens = c(1)
   last = 1
   tmp = last
@@ -476,7 +478,9 @@ ESAC_calibrate = function(n,p, alpha = 1.5, K = 5, N=1000, tol=0.001, bonferroni
   ts = ss
 
   
-  
+  if(is.null(tdf)){
+    tdf =0
+  }
   if(debug){
     print("as:")
     print(as)
@@ -503,7 +507,7 @@ ESAC_calibrate = function(n,p, alpha = 1.5, K = 5, N=1000, tol=0.001, bonferroni
              as.integer(toln), as.integer(lens), as.integer(length(lens)),
              as.integer(K), as.numeric(as), as.numeric(nu_as), as.integer(length(as)),
              as.integer(0), as.integer(ts), as.integer(fast),
-             as.integer(rescale_variance),as.integer(debug))
+             as.integer(rescale_variance),as.integer(tdf),as.integer(debug))
   
   if(bonferroni){
     ESACtreshinfo =  r_func_values(n,p)

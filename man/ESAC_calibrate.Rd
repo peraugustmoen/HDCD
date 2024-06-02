@@ -14,6 +14,7 @@ ESAC_calibrate(
   bonferroni = TRUE,
   fast = FALSE,
   rescale_variance = TRUE,
+  tdf = NULL,
   debug = FALSE
 )
 }
@@ -35,6 +36,9 @@ ESAC_calibrate(
 \item{fast}{If \code{TRUE}, ESAC only tests for a change-point at the midpoint of each seeded interval}
 
 \item{rescale_variance}{If \code{TRUE}, each row of the data is re-scaled by a MAD estimate using \code{\link{rescale_variance}}}
+
+\item{tdf}{If NULL, samples are drawn from a Gaussian distribution. Otherwise, they are drawn from a \eqn{t}
+distribution with \code{tdf} degrees of freedom.}
 
 \item{debug}{If \code{TRUE}, diagnostic prints are provided during execution}
 }

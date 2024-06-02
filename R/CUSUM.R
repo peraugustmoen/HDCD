@@ -38,8 +38,7 @@ CUSUM = function(X, start=NULL, stop=NULL){
   }
   
   res = .Call(CUSUM_R, X, as.integer(start), as.integer(stop), as.integer(p), as.integer(n))
-
-  res = matrix(res, nrow = p, ncol = stop-start-1)
+  res = matrix(res[1:(p*(stop-start-1))], nrow = p, ncol = stop-start-1)
   return(res)
 }
 

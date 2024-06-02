@@ -1019,7 +1019,7 @@ SEXP cESAC(SEXP XI,SEXP nI, SEXP pI,SEXP thresholdsI, SEXP thresholds_testI, SEX
 
 SEXP cESAC_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLensI,SEXP KI,
     SEXP asI, SEXP nu_asI, SEXP len_asI, SEXP twolognI, SEXP tsI, SEXP fastI, SEXP rescale_variance_boolI,
-    SEXP debugI){
+    SEXP tdfI, SEXP debugI){
     // X : p \times n
     PROTECT(lensI);
     PROTECT(asI);
@@ -1035,7 +1035,7 @@ SEXP cESAC_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
     PROTECT(tsI);
     PROTECT(rescale_variance_boolI);
     PROTECT(debugI);
-
+    PROTECT(tdfI);
     PROTECT(fastI);
 
     int n = *(INTEGER(nI));
@@ -1053,6 +1053,7 @@ SEXP cESAC_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
     int debug = *INTEGER(debugI);
     int fast = *INTEGER(fastI);
     int rescale_variance_bool = *INTEGER(rescale_variance_boolI);
+    int tdf = *INTEGER(tdfI);
 
     if(debug){
       Rprintf("p = %d\n", p);
@@ -1166,8 +1167,14 @@ SEXP cESAC_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
         {
             for (i = 0; i < p; ++i)
             {
-                X[cord_spec(i,j,p)] = norm_rand();
-                //X[cord_spec(i,j,p)] = qt(unif_rand(), 10,1,0);
+                if(tdf ==0){
+                    X[cord_spec(i,j,p)] = norm_rand();
+                }
+                else{
+                    X[cord_spec(i,j,p)] = qt(unif_rand(), tdf,1,0);
+                }
+                
+                
             }
         }
         PutRNGstate();
@@ -1372,7 +1379,7 @@ SEXP cESAC_calibrate(SEXP nI, SEXP pI, SEXP NI, SEXP tolnI,SEXP lensI,SEXP lenLe
     setAttrib(ret, R_NamesSymbol, names);
 
 
-    UNPROTECT(27);
+    UNPROTECT(28);
     return(ret);
 
 

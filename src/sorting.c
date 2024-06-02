@@ -129,11 +129,7 @@ void swap(double* a, double* b)
     *a = *b;
     *b = tmp;
 }
-/* partition function takes last element as pivot and places
-   the pivot element at its correct position. It means all
-   smaller element will be placed to left all greater elements
-   to right of pivot
- */
+
 int partition (double * arr, int left, int right)
 {
     double pivot = fabs(arr[right]); // pivot
@@ -141,40 +137,35 @@ int partition (double * arr, int left, int right)
     int j = left;
     for (j = left; j <= (right - 1); j++)
     {
-        // If current element is smaller than the pivot
+        
         if (fabs(arr[j]) > pivot)
         {
-            i++; // increment index of smaller element
+            
             swap(&arr[i], &arr[j]);
         }
     }
     swap(&arr[i + 1], &arr[right]);
     return (i + 1);
 }
-// Function returns the k'th smallest
-//element in the arr within `left…right`
-// (i.e., `left <= k <= right`).
+
 int quickselect(double * arr, int left, int right, int k)
 {
-    // If k is smaller than number of
-    // elements in array
+    
     if (k > 0 && k <= (right - left + 1))
     {
-        // Partition the array around last
-        // element and get position of pivot
-        // element in sorted array
+        
         int index = partition(arr, left, right);
-        // If position is same as k
+        
         if (index - left == k - 1)
             return arr[index];
-        // If position is more, recur
-        // for left subarray
+        
         if (index - left > k - 1)
             return quickselect(arr, left, index - 1, k);
-        // Else recur for right subarray
+        
         return quickselect(arr, index + 1, right,
                            k - index + left - 1);
     }
+    return -1;
 }
 
 void rec_partial_quicksort(double * A, int i, int j, int m) {

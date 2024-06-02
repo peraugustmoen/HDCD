@@ -1,11 +1,11 @@
 #### Simulation for multiple change-points
-
+### Here we recreate the simulation study from Appendix D in Moen et al. (2024),	arXiv:2306.04702
+##  To recreate the table in the paper, uncomment lines 37 and 38
 library(doSNOW)
 library(HDCD)
 library(foreach)
-## same magnitude in all coords
 
-maindir = "/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/Simulations_ESAC"
+maindir = "... fill in ... "
 dateandtime = gsub(" ", "--",as.character(Sys.time()))
 dateandtime = gsub(":", ".", dateandtime)
 savedir = file.path(maindir, dateandtime)
@@ -15,14 +15,14 @@ save = TRUE
 
 if(save){
   dir.create(savedir, showWarnings = FALSE)
-  savedir = file.path(maindir, sprintf("%s/multi_FAST_comparison",dateandtime))
+  savedir = file.path(maindir, sprintf("%s/multi_ESAC_comparison",dateandtime))
   dir.create(savedir, showWarnings = FALSE)
   
 }
 
 
 
-N = 100
+N = 1000
 num_cores = 6
 sparse_const = 3.5
 dense_const = 3.5
@@ -30,36 +30,16 @@ set.seed(1996)
 rescale_variance = TRUE
 Ncal = 1000
 tol = 1/Ncal
-#tol = 0.001
 
-#ns = c(500,1000,2000)
-#ns = c(100,500,1000)
-#ns = c(500,1000,2000)
-#ns = c(100,500,1000)
-#ps = c(1000,2000,10000)
-#ns = c(100,500)
-#ps = ns[]
-#ps = c(500,1000,2000,5000)
-#kvals=4
-#totruns = length(ns)*length(ps)*kvals
-#ns = c(100,200,500,2000)
-ns = c(200,500)
-#ns = c(500)
-#ps = c(1000)
-#ps = c(50,100,500,1000,4000)
-ps = c(50,100,1000)
-#ps = c(50,100,500,5000)
-#ps = ns[]
+ns = c(10,20)
+ps = c(10,20)
 
-
-# rez = config(7, n, p, mus)
-# etas = rez[[1]]
-# sparsities = rez[[2]]
-# mus = rez[[3]]
+#ns = c(200,500) #uncomment for using the same values of n as in the article
+#ps = c(50,100,1000) #uncomment for using the same values of p as in the article
 
 
 
-# calibrate
+# calibrate ESAC thresholds:
 
 cl <- makeCluster(num_cores,type="SOCK")
 registerDoSNOW(cl)
@@ -67,7 +47,6 @@ pb <- txtProgressBar(max = ((length(ns)*length(ps))), style = 3)
 progress <- function(n) setTxtProgressBar(pb, n)
 opts <- list(progress = progress)
 calibrates = foreach(z = 0:((length(ns)*length(ps))-1),.options.snow = opts) %dopar% {
-  #  for(z in 0:((length(ns)*length(ps))-1)){
   library(HDCD)
   set.seed(300*z)
   rez = list()
@@ -75,7 +54,7 @@ calibrates = foreach(z = 0:((length(ns)*length(ps))-1),.options.snow = opts) %do
   pind = z%%length(ps)+1
   cc = ESAC_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=4, alpha = 2, fast = TRUE,
                       rescale_variance = rescale_variance, debug=FALSE)
-  # cc2 = ESAC_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,debug=FALSE)
+ 
   
   
   cc2 = ESAC_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=4, alpha = 2, fast = FALSE,
@@ -84,8 +63,8 @@ calibrates = foreach(z = 0:((length(ns)*length(ps))-1),.options.snow = opts) %do
   cc3 = ESAC_calibrate(ns[nind],ps[pind], N=Ncal, tol=tol,K=5, alpha = 1+1/2, fast = FALSE,
                        rescale_variance = rescale_variance, debug=FALSE)
   
-  rez[[1]] = cc[[1]] #FAST threshoolds
-  rez[[2]] = cc[[2]] #FAST thresholds
+  rez[[1]] = cc[[1]] #ESAC threshoolds
+  rez[[2]] = cc[[2]] #ESAC thresholds
   rez[[3]] = cc2[[1]] 
   rez[[4]] = cc2[[2]] 
   rez[[5]] = cc3[[1]] 
@@ -103,9 +82,7 @@ stopCluster(cl)
 
 numconfig = 7
 config = function(i,n,p){
-  #mus = matrix(0, nrow=p, ncol=n)
   mus = matrix(0, nrow=p, ncol=n)
-  #k = 0
   etas = c()
   sparsities = c()
   sparsity = c()
@@ -294,8 +271,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
   library(HDCD)
   library(hdbinseg)
   counter = 1
-  source("/Users/peraugust/OneDrive - Universitetet i Oslo/project1/simulations/ESAC/SUBSET/main.R")
-  
+
   for (i in 1:length(ns)) {
     n = ns[i]
     for(j in 1:length(ps)){
@@ -316,115 +292,96 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
         rezi[["j"]] = j
         rezi[["y"]] = y
         
-        # ESAC_fast
-        #xi = 4*sqrt(log(p*n))
-        #lambda = sqrt(log(p*log(n)))
-        lambda = sqrt(log(p*log(n))/2)
         
         
         a = proc.time()
-        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[2]], droppartialsum = FALSE, fast =TRUE,
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[2]], fast =TRUE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
         rezi[["ESAC_fast_time"]] = (b-a)[1]+(b-a)[2]
         rezi[["ESAC_fast_K"]]= res$changepointnumber
         rezi[["ESAC_fast_chgpts"]]= res$changepoints
-        rezi[["ESAC_fast_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["ESAC_fast_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["ESAC_fast_ari"]] = ARI(etas, res$changepoints, n)
-        
+        if(res$changepointnumber==0){
+          rezi[["ESAC_fast_hausd"]] = n
+        }else{
+          rezi[["ESAC_fast_hausd"]] = hausdorff(res$changepoints, etas,n)
+        }
+        rezi[["ESAC_fast_K"]] = length(res$changepoints) - length(etas)
+
         
         
         a = proc.time()
-        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[1]], droppartialsum = TRUE, fast =TRUE,
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[1]],  fast =TRUE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
         rezi[["ESAC_fast_np_time"]] = (b-a)[1]+(b-a)[2]
         rezi[["ESAC_fast_np_K"]]= res$changepointnumber
         rezi[["ESAC_fast_np_chgpts"]]= res$changepoints
-        rezi[["ESAC_fast_np_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["ESAC_fast_np_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["ESAC_fast_np_ari"]] = ARI(etas, res$changepoints, n)
+        if(res$changepointnumber==0){
+          rezi[["ESAC_fast_np_hausd"]] = n
+        }else{
+          rezi[["ESAC_fast_np_hausd"]] = hausdorff(res$changepoints, etas,n)
+        }
+        rezi[["ESAC_fast_np_K"]] = length(res$changepoints) - length(etas)
         
         
         a = proc.time()
-        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[3]], droppartialsum = TRUE, fast =FALSE,
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[3]],  fast =FALSE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
         rezi[["ESAC_time"]] = (b-a)[1]+(b-a)[2]
         rezi[["ESAC_K"]]= res$changepointnumber
         rezi[["ESAC_chgpts"]]= res$changepoints
-        rezi[["ESAC_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["ESAC_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["ESAC_ari"]] = ARI(etas, res$changepoints, n)
-        
+        if(res$changepointnumber==0){
+          rezi[["ESAC_hausd"]] = n
+        }else{
+          rezi[["ESAC_hausd"]] = hausdorff(res$changepoints, etas,n)
+        }
+        rezi[["ESAC_K"]] = length(res$changepoints) - length(etas)
+
         a = proc.time()
-        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 5, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[5]], droppartialsum = TRUE, fast =FALSE,
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 5, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[5]],  fast =FALSE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
         rezi[["ESAC_long_time"]] = (b-a)[1]+(b-a)[2]
         rezi[["ESAC_long_K"]]= res$changepointnumber
         rezi[["ESAC_long_chgpts"]]= res$changepoints
-        rezi[["ESAC_long_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["ESAC_long_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["ESAC_long_ari"]] = ARI(etas, res$changepoints, n)
+        if(res$changepointnumber==0){
+          rezi[["ESAC_long_hausd"]] = n
+        }else{
+          rezi[["ESAC_long_hausd"]] = hausdorff(res$changepoints, etas,n)
+        }
         
+        rezi[["ESAC_long_K"]] = length(res$changepoints) - length(etas)
+
         a = proc.time()
-        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds = (calibrates[[j+(i-1)*length(ps)]])[[3]], thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[3]], droppartialsum = TRUE, fast =FALSE,
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 2, K = 4, thresholds = (calibrates[[j+(i-1)*length(ps)]])[[3]], thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[3]],  fast =FALSE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
         rezi[["ESAC_emp_time"]] = (b-a)[1]+(b-a)[2]
         rezi[["ESAC_emp_K"]]= res$changepointnumber
         rezi[["ESAC_emp_chgpts"]]= res$changepoints
-        rezi[["ESAC_emp_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["ESAC_emp_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["ESAC_emp_ari"]] = ARI(etas, res$changepoints, n)
-        
+        if(res$changepointnumber==0){
+          rezi[["ESAC_emp_hausd"]] = n
+        }else{
+          rezi[["ESAC_emp_hausd"]] = hausdorff(res$changepoints, etas,n)
+        }
+        rezi[["ESAC_emp_K"]] = length(res$changepoints) - length(etas)
+
         a = proc.time()
-        #res  = ESAC (X, 2,2, K=2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[2]] , droppartialsum = FALSE, fast =TRUE,debug= FALSE)
-        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 5, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[5]], thresholds = (calibrates[[j+(i-1)*length(ps)]])[[5]], droppartialsum = TRUE, fast =FALSE,
+        res = ESAC (X[,], 1.5,1, empirical=TRUE,alpha = 1.5, K = 5, thresholds_test = (calibrates[[j+(i-1)*length(ps)]])[[5]], thresholds = (calibrates[[j+(i-1)*length(ps)]])[[5]],  fast =FALSE,
                     rescale_variance = rescale_variance, debug= FALSE)
         b=proc.time()
         rezi[["ESAC_long_emp_time"]] = (b-a)[1]+(b-a)[2]
         rezi[["ESAC_long_emp_K"]]= res$changepointnumber
         rezi[["ESAC_long_emp_chgpts"]]= res$changepoints
-        rezi[["ESAC_long_emp_hausd"]] = hausdorff(res$changepoints, etas,n)
-        rezi[["ESAC_long_emp_K_error"]] = length(res$changepoints) - length(etas)
-        rezi[["ESAC_long_emp_ari"]] = ARI(etas, res$changepoints, n)
-        
-        # ESAC
-        
-        # slow FAST:
-        # a = proc.time()
-        # res  = ESAC (X, 2,2, empirical=TRUE, thresholds_test =(calibrates[[j+(i-1)*length(ps)]])[[4]] , droppartialsum = FALSE, fast =FALSE,debug= FALSE)
-        # b=proc.time()
-        # 
-        # rezi[["ESAC_time"]] = (b-a)[1]+(b-a)[2]
-        # rezi[["ESAC_K"]] = res$changepointnumber
-        # rezi[["ESAC_chgpts"]]= res$changepoints
-        # rezi[["ESAC_hausd"]] = hausdorff(res$changepoints, etas,n)
-        # rezi[["ESAC_K_error"]] = length(res$changepoints) - length(etas)
-        # rezi[["ESAC_ari"]] = ARI(etas, res$changepoints, n)
-        # 
-        # ESAC slow
-        # if(dim(X)[2]>500){
-        #   rezi[["pilliat_time"]] = NA
-        #   rezi[["pilliat_K"]] = NA
-        #   rezi[["pilliat_chgpts"]]= NA
-        #   rezi[["pilliat_hausd"]] = NA
-        #   rezi[["pilliat_K_error"]] = NA
-        #   rezi[["pilliat_ari"]] = NA
-        # }
-        # else{
-        #a = proc.time()
-        #res = ESAC (X, 2,2, alpha = 1+1/6, K = 4, threshold_d_test = 1.5, 
-        #            threshold_s_test = 1.5, droppartialsum = FALSE, fast =FALSE,debug= FALSE)
-        #b=proc.time()
+        if(res$changepointnumber==0){
+          rezi[["ESAC_long_emp_hausd"]] = n
+        }else{
+          rezi[["ESAC_long_emp_hausd"]] = hausdorff(res$changepoints, etas,n)
+        }
+        rezi[["ESAC_long_emp_K"]] = length(res$changepoints) - length(etas)
+
         
         
         
@@ -442,9 +399,7 @@ result = foreach(z = 1:N,.options.snow = opts) %dopar% {
   }
   rez
 }
-# bb = proc.time()
-# print(bb-aa)
-#parallel::stopCluster(cl)
+
 close(pb)
 stopCluster(cl) 
 
@@ -497,12 +452,12 @@ stopCluster(cl)
       i = sublist[["i"]]
       j = sublist[["j"]]
       
-      ESAC_fast_Kerr[i,j,y] = ESAC_fast_Kerr[i,j,y] + abs(sublist[["ESAC_fast_K_error"]])/N
-      ESAC_fast_np_Kerr[i,j,y] = ESAC_fast_np_Kerr[i,j,y] + abs(sublist[["ESAC_fast_np_K_error"]])/N
-      ESAC_Kerr[i,j,y] = ESAC_Kerr[i,j,y] + abs(sublist[["ESAC_K_error"]])/N
-      ESAC_emp_Kerr[i,j,y] = ESAC_emp_Kerr[i,j,y] + abs(sublist[["ESAC_emp_K_error"]])/N
-      ESAC_long_Kerr[i,j,y] = ESAC_long_Kerr[i,j,y] + abs(sublist[["ESAC_long_K_error"]])/N
-      ESAC_long_emp_Kerr[i,j,y] = ESAC_long_emp_Kerr[i,j,y] + abs(sublist[["ESAC_long_emp_K_error"]])/N
+      ESAC_fast_Kerr[i,j,y] = ESAC_fast_Kerr[i,j,y] + abs(sublist[["ESAC_fast_K"]])/N
+      ESAC_fast_np_Kerr[i,j,y] = ESAC_fast_np_Kerr[i,j,y] + abs(sublist[["ESAC_fast_np_K"]])/N
+      ESAC_Kerr[i,j,y] = ESAC_Kerr[i,j,y] + abs(sublist[["ESAC_K"]])/N
+      ESAC_emp_Kerr[i,j,y] = ESAC_emp_Kerr[i,j,y] + abs(sublist[["ESAC_emp_K"]])/N
+      ESAC_long_Kerr[i,j,y] = ESAC_long_Kerr[i,j,y] + abs(sublist[["ESAC_long_K"]])/N
+      ESAC_long_emp_Kerr[i,j,y] = ESAC_long_emp_Kerr[i,j,y] + abs(sublist[["ESAC_long_emp_K"]])/N
       
       
       ESAC_fast_time[i,j,y] = ESAC_fast_time[i,j,y] + sublist[["ESAC_fast_time"]]/N
@@ -513,17 +468,15 @@ stopCluster(cl)
       ESAC_long_emp_time[i,j,y] = ESAC_long_emp_time[i,j,y] + sublist[["ESAC_long_emp_time"]]/N
       
       
-      ESAC_fast_ari[i,j,y] = ESAC_fast_ari[i,j,y] + sublist[["ESAC_fast_ari"]]/N
-      ESAC_fast_np_ari[i,j,y] = ESAC_fast_np_ari[i,j,y] + sublist[["ESAC_fast_np_ari"]]/N
-      ESAC_ari[i,j,y] = ESAC_ari[i,j,y] + sublist[["ESAC_ari"]]/N
-      ESAC_emp_ari[i,j,y] = ESAC_emp_ari[i,j,y] + sublist[["ESAC_emp_ari"]]/N
-      ESAC_long_ari[i,j,y] = ESAC_long_ari[i,j,y] + sublist[["ESAC_long_ari"]]/N
-      ESAC_long_emp_ari[i,j,y] = ESAC_long_emp_ari[i,j,y] + sublist[["ESAC_long_emp_ari"]]/N
+      # ESAC_fast_ari[i,j,y] = ESAC_fast_ari[i,j,y] + sublist[["ESAC_fast_ari"]]/N
+      # ESAC_fast_np_ari[i,j,y] = ESAC_fast_np_ari[i,j,y] + sublist[["ESAC_fast_np_ari"]]/N
+      # ESAC_ari[i,j,y] = ESAC_ari[i,j,y] + sublist[["ESAC_ari"]]/N
+      # ESAC_emp_ari[i,j,y] = ESAC_emp_ari[i,j,y] + sublist[["ESAC_emp_ari"]]/N
+      # ESAC_long_ari[i,j,y] = ESAC_long_ari[i,j,y] + sublist[["ESAC_long_ari"]]/N
+      # ESAC_long_emp_ari[i,j,y] = ESAC_long_emp_ari[i,j,y] + sublist[["ESAC_long_emp_ari"]]/N
       
       
-      # if(i==1 & j ==1 & y==1){
-      #   print(sublist[["ESAC_ari"]])
-      # }
+     
       
       if(y!= 1){
         ESAC_fast_hausd[i,j,y] = ESAC_fast_hausd[i,j,y] + sublist[["ESAC_fast_hausd"]]/N
@@ -600,7 +553,7 @@ if(save){
                  "\\begin{tabular}{@{\\extracolsep{1pt}} cccc|cccc|cccc|cccc|cccc}",
                  "\\hline", 
                  "\\multicolumn{4}{c|}{Parameters} & \\multicolumn{4}{c|}{Hausdorff distance} &\\multicolumn{4}{c|}{$\\left | \\widehat{K}-K \\right |$} &\\multicolumn{4}{c|}{ARI} &\\multicolumn{4}{c}{Time in miliseconds} \\\\ \\hline ",
-                 "$n$ & $p$ & Sparsity & K & \\text{FAST A} & \\text{FAST B} & \\text{ FAST C} & \\text{FAST D}  & \\text{FAST A} & \\text{FAST B} & \\text{FAST C} & \\text{FAST D}  &\\text{FAST A} & \\text{FAST B} & \\text{FAST C} & \\text{FAST D} &\\text{FAST A} & \\text{FAST B} & \\text{FAST C} & \\text{FAST D} \\\\", 
+                 "$n$ & $p$ & Sparsity & K & \\text{ESAC A} & \\text{ESAC B} & \\text{ ESAC C} & \\text{ESAC D}  & \\text{ESAC A} & \\text{ESAC B} & \\text{ESAC C} & \\text{ESAC D}  &\\text{ESAC A} & \\text{ESAC B} & \\text{ESAC C} & \\text{ESAC D} &\\text{ESAC A} & \\text{ESAC B} & \\text{ESAC C} & \\text{ESAC D} \\\\", 
                  "\\hline \\")
   
   
@@ -619,14 +572,7 @@ if(save){
           sparsity="-"
         }
         
-        #k = kfunc(y,n,p)
-        #eta = round(0.4*n)
-        #rootnorm = 0
-        #if(k<sqrt(p*log(n^4))){
-        #  rootnorm = sparse_const/sqrt(eta)*sqrt(max(c(k*log(exp(1)*p*log(n^4)/k^2), log(n^4))))
-        #}else{
-        #  rootnorm = dense_const/sqrt(eta)*(p*log(n^4))^(1/4)
-        #}
+       
         string = sprintf("%d & %d & %s & %d ", n, p, sparsity, length(etas))
         
         
